@@ -23,25 +23,40 @@ Working tagline candidates:
 
 ```
 TechnoDating.slnx
+docker-compose.yml             ← Postgres + PostGIS for local dev
+dotnet-tools.json              ← local dotnet-ef tool pinned
 └── src/
     ├── TechnoDating/             ← MAUI Blazor Hybrid app
     ├── TechnoDating.Api/         ← ASP.NET Core controllers + MediatR (vertical slice)
-    │   └── Application/
-    │       ├── Festivals/
-    │       │   ├── FestivalsController.cs
-    │       │   ├── Requests/   (IRequest<T> records)
-    │       │   └── Handlers/   (IRequestHandler<TRequest, TResponse>)
-    │       └── Matches/
-    │           ├── MatchesController.cs
-    │           ├── Requests/
-    │           └── Handlers/
+    │   ├── Application/
+    │   │   ├── Festivals/        ← FestivalsController + Requests/ + Handlers/
+    │   │   └── Matches/          ← MatchesController + Requests/ + Handlers/
+    │   └── Infrastructure/
+    │       ├── Entities/         ← User, Festival, Match
+    │       ├── TechnoDatingDbContext.cs
+    │       ├── Migrations/       ← EF Core migrations
+    │       └── Seeding/          ← DatabaseInitializer (IHostedService)
     ├── TechnoDating.Contracts/   ← DTOs shared by Mobile + Api
-    ├── TechnoDating.Domain/      ← (later) entities, value objects, domain events
-    ├── TechnoDating.Infrastructure/ ← (later) EF Core, Spotify, ticketing adapters
     └── TechnoDating.Workers/     ← (later) background services
 ```
 
-Application logic lives **inside the Api project** as feature folders, not in a separate `TechnoDating.Application` assembly. Don't pre-create empty projects.
+Application + Infrastructure both live **inside the Api project** as folders. Don't pre-create empty projects — promote folders to projects only when there's a concrete need (e.g. a Workers process needing its own host).
+
+### Database
+
+- **PostgreSQL 16 + PostGIS** via Docker (`postgis/postgis:16-3.4`). Spin up: `docker compose up -d`.
+- **EF Core 10** with `Npgsql.EntityFrameworkCore.PostgreSQL` + `.NetTopologySuite` plugin (for `geography(Point, 4326)` columns and `ST_Distance` translation from LINQ).
+- **`DatabaseInitializer`** (IHostedService) runs `MigrateAsync()` then idempotent seed on every startup — drop the volume (`docker compose down -v`) to start fresh.
+- Connection string in `appsettings.Development.json` → `ConnectionStrings:TechnoDating`. Production reads the same key from environment variables / Azure Key Vault when it lands.
+- `dotnet-ef` is a **local tool** pinned in `dotnet-tools.json`. Run with `dotnet ef migrations add <Name> --project src/TechnoDating.Api --output-dir Infrastructure/Migrations`.
+
+### Entities (current)
+
+- `User` — Id, Email (unique), DisplayName, DateOfBirth, Gender, Bio, City, Location (`Point`, SRID 4326), TopArtists (text[]), IsVerified, CreatedAt, LastActiveAt
+- `Festival` — Id, Name, Date, City, Venue, HeadlineArtists (text[]), Location
+- `Match` — Id, UserAId, UserBId, MatchedAt (unique (UserAId, UserBId))
+
+**Not yet modelled** (TODOs as they become relevant): `UserFestivalAttendance` (many-to-many — needed for "CommonFestivals" on `MatchProfileDto`), authentication / identity store, photos, swipe/like events, messages.
 
 ### API architecture (vertical slice + MediatR)
 
@@ -227,7 +242,9 @@ Interfaces in `Application`, implementations in `Infrastructure`. Keep them off 
 
 - API runs on **`http://localhost:5000`** (HTTP, no dev cert — avoids self-signed cert pain on Android emulator).
 - Mobile `HttpClient.BaseAddress` is platform-aware: `http://10.0.2.2:5000` on Android (emulator → host loopback), `http://localhost:5000` elsewhere. See `MauiProgram.cs`.
-- To run both: open two terminals — `dotnet run --project src/TechnoDating.Api` and `dotnet build -t:Run -f net10.0-windows10.0.19041.0 src/TechnoDating` (or run the Mobile target from your IDE).
+- **First-time setup**: `docker compose up -d` to start Postgres. The first API run auto-applies migrations and seeds.
+- **Daily**: `docker compose up -d` (idempotent — fast no-op if already running) → F5 the multi-startup in VS, or `dotnet run --project src/TechnoDating.Api` + `dotnet build -t:Run -f net10.0-windows10.0.19041.0 src/TechnoDating`.
+- **Reset DB**: `docker compose down -v` (drops the volume → next run re-seeds).
 
 ## Session log
 
@@ -236,3 +253,4 @@ Interfaces in `Application`, implementations in `Infrastructure`. Keep them off 
 - **2026-05-25** — Initial context file created. Strategic research from prior chat captured. Tech stack confirmed as .NET MAUI.
 - **2026-05-25** — Locked: techno launch scene, Amsterdam likely launch city, MAUI Blazor Hybrid committed, SignalR for real-time, monorepo solution layout. Restructured repo into `src/` with `TechnoDating` (mobile), `TechnoDating.Api`, `TechnoDating.Contracts`. Scaffolded minimal API with `/api/festivals` + `/api/matches` returning test data; mobile fetches and displays them. Profile verification added as a first-class product TODO (iDIN + live selfie + behavioural signals).
 - **2026-05-25** — Refactored API from minimal endpoints to controllers + MediatR vertical slice. Pinned MediatR to **12.5.0** (last MIT release; 13+ is commercial). Adopted feature-folder layout: `Application/[Feature]/[Feature]Controller.cs` + `Requests/` + `Handlers/`. Test data moved inline into handler method bodies so it survives Hot Reload (static field initializers don't re-run).
+- **2026-05-25** — Database stack: Postgres + PostGIS via Docker Compose; EF Core 10 + Npgsql + NetTopologySuite. Added `Infrastructure/` folder inside Api with `TechnoDatingDbContext`, `User`/`Festival`/`Match` entities (User has `geography(Point, 4326)` location + `TopArtists text[]`), initial migration, and a `DatabaseInitializer` IHostedService that migrates + seeds on startup. Both handlers now read from the DB; matches are ordered by PostGIS `ST_Distance` from a placeholder Amsterdam-centre point. `dotnet-ef` installed as a local tool.

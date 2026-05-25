@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: technodating-db
+    environment:
+      POSTGRES_USER: technodating
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: technodating
+    ports:
+      - "5432:5432"
+    volumes:
+      - technodating-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U technodating -d technodating"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  technodating-db-data:

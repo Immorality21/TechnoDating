@@ -1,49 +1,55 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
 using TechnoDating.Api.Application.Matches.Requests;
+using TechnoDating.Api.Infrastructure;
 using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Matches.Handlers;
 
-public class GetMatchesHandler : IRequestHandler<GetMatchesRequest, IReadOnlyList<MatchProfileDto>>
+public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMatchesRequest, IReadOnlyList<MatchProfileDto>>
 {
-    public Task<IReadOnlyList<MatchProfileDto>> Handle(GetMatchesRequest request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MatchProfileDto>> Handle(GetMatchesRequest request, CancellationToken cancellationToken)
     {
-        IReadOnlyList<MatchProfileDto> matches =
-        [
-            new(
-                Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                "Sofie",
-                28,
-                "Amsterdam",
-                ["Charlotte de Witte", "Amelie Lens", "Reinier Zonneveld"],
-                ["Awakenings Festival", "Amsterdam Dance Event"],
-                DistanceKm: 2.4),
-            new(
-                Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-                "Daan",
-                31,
-                "Utrecht",
-                ["Mind Against", "Tale Of Us", "Boris Brejcha"],
-                ["DGTL Amsterdam", "Amsterdam Dance Event"],
-                DistanceKm: 38.1),
-            new(
-                Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
-                "Lieke",
-                26,
-                "Amsterdam",
-                ["Anfisa Letyago", "Indira Paganotto", "I Hate Models"],
-                ["DGTL Amsterdam", "Verknipt Festival", "Awakenings Festival"],
-                DistanceKm: 4.7),
-            new(
-                Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
-                "Maud",
-                29,
-                "Amsterdam",
-                ["Honey Dijon", "Job Jobse", "Carista"],
-                ["Lente Kabinet", "Amsterdam Dance Event"],
-                DistanceKm: 6.0),
-        ];
+        // Placeholder centre point until we have an authenticated "current user".
+        var center = new Point(4.90, 52.37) { SRID = 4326 };
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-        return Task.FromResult(matches);
+        var users = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Location != null)
+            .OrderBy(u => u.Location!.Distance(center))
+            .Select(u => new
+            {
+                u.Id,
+                u.DisplayName,
+                u.DateOfBirth,
+                u.City,
+                u.TopArtists,
+                DistanceMeters = u.Location!.Distance(center),
+            })
+            .ToListAsync(cancellationToken);
+
+        var result = users.Select(u => new MatchProfileDto(
+            u.Id,
+            u.DisplayName,
+            Age: CalculateAge(u.DateOfBirth, today),
+            u.City,
+            u.TopArtists,
+            CommonFestivals: [],
+            DistanceKm: Math.Round(u.DistanceMeters / 1000.0, 1)))
+            .ToList();
+
+        return result;
+    }
+
+    private static int CalculateAge(DateOnly dob, DateOnly today)
+    {
+        var age = today.Year - dob.Year;
+        if (today < dob.AddYears(age))
+        {
+            age--;
+        }
+        return age;
     }
 }
