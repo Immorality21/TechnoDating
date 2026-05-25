@@ -19,21 +19,43 @@ Working tagline candidates:
 - **SignalR** confirmed for real-time (chat, presence, match notifications, on-festival meetup coordination).
 - **Monorepo / single solution** (`TechnoDating.slnx`) — Mobile + Api + shared Contracts live in one solution, atomic PRs across the stack.
 
-### Solution layout (target)
+### Solution layout
 
 ```
 TechnoDating.slnx
 └── src/
-    ├── TechnoDating/             ← MAUI Blazor Hybrid app (the user-facing app)
-    ├── TechnoDating.Api/         ← ASP.NET Core minimal API
-    ├── TechnoDating.Contracts/   ← DTOs shared by Mobile + Api (compile-time sync)
+    ├── TechnoDating/             ← MAUI Blazor Hybrid app
+    ├── TechnoDating.Api/         ← ASP.NET Core controllers + MediatR (vertical slice)
+    │   └── Application/
+    │       ├── Festivals/
+    │       │   ├── FestivalsController.cs
+    │       │   ├── Requests/   (IRequest<T> records)
+    │       │   └── Handlers/   (IRequestHandler<TRequest, TResponse>)
+    │       └── Matches/
+    │           ├── MatchesController.cs
+    │           ├── Requests/
+    │           └── Handlers/
+    ├── TechnoDating.Contracts/   ← DTOs shared by Mobile + Api
     ├── TechnoDating.Domain/      ← (later) entities, value objects, domain events
-    ├── TechnoDating.Application/ ← (later) use cases, MediatR handlers, validators
     ├── TechnoDating.Infrastructure/ ← (later) EF Core, Spotify, ticketing adapters
     └── TechnoDating.Workers/     ← (later) background services
 ```
 
-Only Mobile + Api + Contracts exist today — the rest are added when there's something to put in them. Don't pre-create empty projects.
+Application logic lives **inside the Api project** as feature folders, not in a separate `TechnoDating.Application` assembly. Don't pre-create empty projects.
+
+### API architecture (vertical slice + MediatR)
+
+- **Controllers** (`[ApiController]`, `[Route("api/[controller]")]`) inject `IMediator` and forward to a request — never contain business logic directly.
+- **Requests** are `record`s implementing `IRequest<TResponse>` (MediatR). One file per request, in `Application/[Feature]/Requests/`.
+- **Handlers** implement `IRequestHandler<TRequest, TResponse>`. One file per handler, in `Application/[Feature]/Handlers/`.
+- **Folder naming rule**: feature folder name = controller name minus the `Controller` suffix (e.g. `FestivalsController` → `Application/Festivals/`).
+- **MediatR pinned to `12.5.0`** — the last MIT-licensed version. v13+ is commercial.
+- MediatR registration in `Program.cs` scans the API assembly:
+  `builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));`
+
+### Hot-reload-friendly patterns
+
+Static field initializers don't re-run on Hot Reload — they're a silent trap. Method bodies do re-run. Keep mutable-feeling test data and seed lists **inside handler `Handle` methods**, not as `static readonly` fields. When real data lands, the same handlers move from inline lists to repository/EF Core calls.
 
 ## Project owner profile
 
@@ -213,3 +235,4 @@ Interfaces in `Application`, implementations in `Infrastructure`. Keep them off 
 
 - **2026-05-25** — Initial context file created. Strategic research from prior chat captured. Tech stack confirmed as .NET MAUI.
 - **2026-05-25** — Locked: techno launch scene, Amsterdam likely launch city, MAUI Blazor Hybrid committed, SignalR for real-time, monorepo solution layout. Restructured repo into `src/` with `TechnoDating` (mobile), `TechnoDating.Api`, `TechnoDating.Contracts`. Scaffolded minimal API with `/api/festivals` + `/api/matches` returning test data; mobile fetches and displays them. Profile verification added as a first-class product TODO (iDIN + live selfie + behavioural signals).
+- **2026-05-25** — Refactored API from minimal endpoints to controllers + MediatR vertical slice. Pinned MediatR to **12.5.0** (last MIT release; 13+ is commercial). Adopted feature-folder layout: `Application/[Feature]/[Feature]Controller.cs` + `Requests/` + `Handlers/`. Test data moved inline into handler method bodies so it survives Hot Reload (static field initializers don't re-run).
