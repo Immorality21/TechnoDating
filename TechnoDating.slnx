@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="TechnoDating.csproj" />
+  <Project Path="src/TechnoDating/TechnoDating.csproj" />
+  <Project Path="src/TechnoDating.Api/TechnoDating.Api.csproj" />
+  <Project Path="src/TechnoDating.Contracts/TechnoDating.Contracts.csproj" />
 </Solution>

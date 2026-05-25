@@ -1,0 +1,64 @@
+@page "/festivals"
+@inject HttpClient Http
+
+<h1>Upcoming techno nights</h1>
+
+<p>Pulled live from <code>GET /api/festivals</code>.</p>
+
+@if (festivals is null)
+{
+    <p><em>Loading…</em></p>
+}
+else if (loadError is not null)
+{
+    <div class="alert alert-danger">
+        <strong>Couldn't reach the API.</strong>
+        <div><code>@loadError</code></div>
+        <div class="mt-2">Make sure <code>TechnoDating.Api</code> is running on <code>http://localhost:5000</code>.</div>
+    </div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Festival</th>
+                <th>City</th>
+                <th>Venue</th>
+                <th>Lineup highlights</th>
+                <th class="text-end">Matches going</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var f in festivals)
+            {
+                <tr>
+                    <td>@f.Date.ToString("ddd d MMM yyyy")</td>
+                    <td><strong>@f.Name</strong></td>
+                    <td>@f.City</td>
+                    <td>@f.Venue</td>
+                    <td>@string.Join(" · ", f.HeadlineArtists)</td>
+                    <td class="text-end">@f.MatchingPeopleCount</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private FestivalDto[]? festivals;
+    private string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            festivals = await Http.GetFromJsonAsync<FestivalDto[]>("/api/festivals");
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+    }
+}
