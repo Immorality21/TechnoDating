@@ -1,0 +1,62 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+out/
+
+# IDE
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*~
+
+# Rider
+**/.idea/
+
+# Test
+TestResults/
+[Cc]overage*/
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# MAUI / mobile signing
+*.keystore
+*.mobileprovision
+*.cer
+*.p12
+**/Resources/Raw/Settings.Generated.cs
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local config (never commit secrets / connection strings)
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+**/local.settings.json
+.env
+.env.*
+
+# Logs
+*.log
+logs/
+
+# Misc
+*.bak
+*.tmp
+
+# Claude Code local settings (per-machine permissions, never commit)
+.claude/settings.local.json
