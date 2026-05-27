@@ -1,0 +1,42 @@
+@inject IAuthStateService Auth
+@inject NavigationManager Nav
+@implements IDisposable
+
+@code {
+    private static readonly string[] AllowedIncompletePaths = ["login", "verify-otp", "onboarding"];
+
+    protected override void OnInitialized()
+    {
+        Auth.OnAuthStateChanged += HandleAuthChanged;
+        Nav.LocationChanged += HandleLocationChanged;
+        Check();
+    }
+
+    private void HandleAuthChanged() => Check();
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e) => Check();
+
+    private void Check()
+    {
+        if (!Auth.IsAuthenticated || Auth.CurrentUser is null)
+        {
+            return;
+        }
+        if (Auth.CurrentUser.IsProfileComplete)
+        {
+            return;
+        }
+        var path = new Uri(Nav.Uri).AbsolutePath.Trim('/');
+        if (AllowedIncompletePaths.Contains(path, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        Nav.NavigateTo("/onboarding", replace: true);
+    }
+
+    public void Dispose()
+    {
+        Auth.OnAuthStateChanged -= HandleAuthChanged;
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+}

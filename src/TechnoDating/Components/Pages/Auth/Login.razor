@@ -1,0 +1,51 @@
+@page "/login"
+@layout MainLayout
+@inject IAuthStateService Auth
+@inject NavigationManager Nav
+
+<h1>Sign in</h1>
+
+<p>Enter your phone number. We'll send you a one-time code.</p>
+
+<EditForm Model="this" OnValidSubmit="Submit">
+    <div class="mb-3">
+        <label for="phone" class="form-label">Phone number</label>
+        <input id="phone" type="tel" class="form-control" @bind="phoneNumber" placeholder="+31600000000" autocomplete="tel" disabled="@busy" />
+    </div>
+
+    @if (errorMessage is not null)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <button type="submit" class="btn btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(phoneNumber))">
+        @(busy ? "Sending…" : "Send code")
+    </button>
+</EditForm>
+
+@code {
+    private string phoneNumber = "+31";
+    private bool busy;
+    private string? errorMessage;
+
+    private async Task Submit()
+    {
+        busy = true;
+        errorMessage = null;
+        try
+        {
+            var trimmed = phoneNumber?.Trim() ?? string.Empty;
+            var ok = await Auth.RequestOtpAsync(trimmed);
+            if (!ok)
+            {
+                errorMessage = "Couldn't send code. Check the number, or wait a minute before retrying.";
+                return;
+            }
+            Nav.NavigateTo($"/verify-otp?phone={Uri.EscapeDataString(trimmed)}");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

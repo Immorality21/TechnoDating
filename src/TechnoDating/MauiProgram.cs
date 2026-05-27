@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
+using TechnoDating.Services;
 
 namespace TechnoDating
 {
@@ -22,12 +24,23 @@ namespace TechnoDating
                 });
 
             builder.Services.AddMauiBlazorWebView();
+            builder.Services.AddAuthorizationCore();
 
-            builder.Services.AddSingleton(_ => new HttpClient
+            builder.Services.AddSingleton<IAuthStateService, AuthStateService>();
+            builder.Services.AddScoped<AuthenticationStateProvider, TechnoDatingAuthenticationStateProvider>();
+            builder.Services.AddTransient<AuthMessageHandler>();
+
+            builder.Services.AddHttpClient("auth", client =>
             {
-                BaseAddress = new Uri(ApiBaseAddress),
-                Timeout = TimeSpan.FromSeconds(10),
+                client.BaseAddress = new Uri(ApiBaseAddress);
+                client.Timeout = TimeSpan.FromSeconds(10);
             });
+
+            builder.Services.AddHttpClient("api", client =>
+            {
+                client.BaseAddress = new Uri(ApiBaseAddress);
+                client.Timeout = TimeSpan.FromSeconds(10);
+            }).AddHttpMessageHandler<AuthMessageHandler>();
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();

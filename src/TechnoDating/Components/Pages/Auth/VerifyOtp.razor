@@ -1,0 +1,72 @@
+@page "/verify-otp"
+@layout MainLayout
+@inject IAuthStateService Auth
+@inject NavigationManager Nav
+
+<h1>Enter your code</h1>
+
+<p>We sent a 6-digit code to <strong>@phoneNumber</strong>.</p>
+
+<EditForm Model="this" OnValidSubmit="Submit">
+    <div class="mb-3">
+        <label for="code" class="form-label">Code</label>
+        <input id="code" type="text" inputmode="numeric" maxlength="6" class="form-control"
+               @bind="code" placeholder="123456" autocomplete="one-time-code" disabled="@busy" />
+    </div>
+
+    @if (errorMessage is not null)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <button type="submit" class="btn btn-primary" disabled="@(busy || code.Length != 6)">
+        @(busy ? "Verifying…" : "Verify")
+    </button>
+    <a href="/login" class="btn btn-link">Use a different number</a>
+</EditForm>
+
+@code {
+    [SupplyParameterFromQuery(Name = "phone")] public string? PhoneParam { get; set; }
+
+    private string phoneNumber = string.Empty;
+    private string code = string.Empty;
+    private bool busy;
+    private string? errorMessage;
+
+    protected override void OnInitialized()
+    {
+        phoneNumber = PhoneParam ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            Nav.NavigateTo("/login", replace: true);
+        }
+    }
+
+    private async Task Submit()
+    {
+        busy = true;
+        errorMessage = null;
+        try
+        {
+            var ok = await Auth.VerifyOtpAsync(phoneNumber, code);
+            if (!ok)
+            {
+                errorMessage = "Invalid or expired code. Try again.";
+                return;
+            }
+            var user = Auth.CurrentUser;
+            if (user is null || !user.IsProfileComplete)
+            {
+                Nav.NavigateTo("/onboarding", replace: true);
+            }
+            else
+            {
+                Nav.NavigateTo("/", replace: true);
+            }
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

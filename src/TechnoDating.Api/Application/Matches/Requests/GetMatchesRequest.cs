@@ -3,4 +3,4 @@ using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Matches.Requests;
 
-public record GetMatchesRequest() : IRequest<IReadOnlyList<MatchProfileDto>>;
+public record GetMatchesRequest(Guid CurrentUserId) : IRequest<IReadOnlyList<MatchProfileDto>>;

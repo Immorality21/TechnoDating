@@ -1,0 +1,165 @@
+@page "/me"
+@attribute [Authorize]
+@layout MainLayout
+@inject IAuthStateService Auth
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+<h1>Your profile</h1>
+
+@if (profile is null)
+{
+    <p><em>Loading…</em></p>
+}
+else
+{
+    <EditForm Model="this" OnValidSubmit="Save">
+        <div class="mb-3">
+            <label class="form-label">Phone</label>
+            <input class="form-control" value="@profile.PhoneNumber" disabled />
+        </div>
+
+        <div class="mb-3">
+            <label for="displayName" class="form-label">Display name</label>
+            <input id="displayName" class="form-control" @bind="displayName" maxlength="100" disabled="@busy" />
+        </div>
+
+        <div class="mb-3">
+            <label for="dob" class="form-label">Date of birth</label>
+            <input id="dob" type="date" class="form-control" @bind="dateOfBirth" disabled="@busy" />
+        </div>
+
+        <div class="mb-3">
+            <label for="gender" class="form-label">Gender</label>
+            <select id="gender" class="form-select" @bind="gender" disabled="@busy">
+                <option value="">Select…</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="city" class="form-label">City</label>
+            <input id="city" class="form-control" @bind="city" maxlength="100" disabled="@busy" />
+        </div>
+
+        <div class="mb-3">
+            <label for="bio" class="form-label">Bio</label>
+            <textarea id="bio" class="form-control" rows="3" @bind="bio" maxlength="2000" disabled="@busy"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="artists" class="form-label">Top artists (comma-separated)</label>
+            <input id="artists" class="form-control" @bind="topArtistsCsv" disabled="@busy" />
+        </div>
+
+        @if (message is not null)
+        {
+            <div class="alert alert-info">@message</div>
+        }
+
+        <button type="submit" class="btn btn-primary" disabled="@(!CanSubmit || busy)">
+            @(busy ? "Saving…" : "Save")
+        </button>
+        <button type="button" class="btn btn-outline-danger ms-2" @onclick="Logout" disabled="@busy">
+            Logout
+        </button>
+    </EditForm>
+}
+
+@code {
+    private UserProfileDto? profile;
+    private string displayName = string.Empty;
+    private DateTime? dateOfBirth;
+    private string gender = string.Empty;
+    private string city = string.Empty;
+    private string bio = string.Empty;
+    private string topArtistsCsv = string.Empty;
+    private bool busy;
+    private string? message;
+
+    private bool CanSubmit =>
+        !string.IsNullOrWhiteSpace(displayName)
+        && dateOfBirth.HasValue
+        && !string.IsNullOrWhiteSpace(gender)
+        && !string.IsNullOrWhiteSpace(city);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var http = HttpClientFactory.CreateClient("api");
+        try
+        {
+            profile = await http.GetFromJsonAsync<UserProfileDto>("/api/users/me");
+            if (profile is not null)
+            {
+                displayName = profile.DisplayName ?? string.Empty;
+                dateOfBirth = profile.DateOfBirth?.ToDateTime(TimeOnly.MinValue);
+                gender = profile.Gender ?? string.Empty;
+                city = profile.City ?? string.Empty;
+                bio = profile.Bio ?? string.Empty;
+                topArtistsCsv = string.Join(", ", profile.TopArtists);
+            }
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+    }
+
+    private async Task Save()
+    {
+        if (!CanSubmit)
+        {
+            return;
+        }
+        busy = true;
+        message = null;
+        try
+        {
+            var artists = topArtistsCsv
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+
+            var dto = new UpdateProfileDto(
+                displayName.Trim(),
+                DateOnly.FromDateTime(dateOfBirth!.Value),
+                gender,
+                string.IsNullOrWhiteSpace(bio) ? null : bio.Trim(),
+                city.Trim(),
+                artists,
+                Longitude: null,
+                Latitude: null);
+
+            var http = HttpClientFactory.CreateClient("api");
+            var response = await http.PutAsJsonAsync("/api/users/me", dto);
+            if (!response.IsSuccessStatusCode)
+            {
+                message = "Save failed.";
+                return;
+            }
+            var updated = await response.Content.ReadFromJsonAsync<UserProfileDto>();
+            if (updated is not null)
+            {
+                profile = updated;
+                await Auth.SetCurrentUserAsync(updated);
+                message = "Saved.";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task Logout()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("/login", replace: true);
+    }
+}

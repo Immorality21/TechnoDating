@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using NetTopologySuite.Geometries;
 using TechnoDating.Api.Application.Matches.Requests;
 using TechnoDating.Api.Infrastructure;
 using TechnoDating.Contracts;
@@ -11,13 +10,23 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
 {
     public async Task<IReadOnlyList<MatchProfileDto>> Handle(GetMatchesRequest request, CancellationToken cancellationToken)
     {
-        // Placeholder centre point until we have an authenticated "current user".
-        var center = new Point(4.90, 52.37) { SRID = 4326 };
+        var me = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == request.CurrentUserId)
+            .Select(u => new { u.Location })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (me?.Location is null)
+        {
+            return [];
+        }
+
+        var center = me.Location;
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
         var users = await db.Users
             .AsNoTracking()
-            .Where(u => u.Location != null)
+            .Where(u => u.Id != request.CurrentUserId && u.Location != null && u.DisplayName != null && u.DateOfBirth != null && u.City != null)
             .OrderBy(u => u.Location!.Distance(center))
             .Select(u => new
             {
@@ -32,9 +41,9 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
 
         var result = users.Select(u => new MatchProfileDto(
             u.Id,
-            u.DisplayName,
-            Age: CalculateAge(u.DateOfBirth, today),
-            u.City,
+            u.DisplayName!,
+            Age: CalculateAge(u.DateOfBirth!.Value, today),
+            u.City!,
             u.TopArtists,
             CommonFestivals: [],
             DistanceKm: Math.Round(u.DistanceMeters / 1000.0, 1)))

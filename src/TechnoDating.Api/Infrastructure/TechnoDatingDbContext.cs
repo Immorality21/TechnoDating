@@ -1,29 +1,33 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TechnoDating.Api.Infrastructure.Entities;
 
 namespace TechnoDating.Api.Infrastructure;
 
-public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> options) : DbContext(options)
+public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> options)
+    : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options)
 {
-    public DbSet<User> Users => Set<User>();
     public DbSet<Festival> Festivals => Set<Festival>();
     public DbSet<Match> Matches => Set<Match>();
+    public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.HasPostgresExtension("postgis");
 
         modelBuilder.Entity<User>(b =>
         {
-            b.HasKey(u => u.Id);
-            b.HasIndex(u => u.Email).IsUnique();
-            b.Property(u => u.Email).IsRequired().HasMaxLength(256);
-            b.Property(u => u.DisplayName).IsRequired().HasMaxLength(100);
-            b.Property(u => u.Gender).IsRequired().HasMaxLength(32);
+            b.Property(u => u.DisplayName).HasMaxLength(100);
+            b.Property(u => u.Gender).HasMaxLength(32);
             b.Property(u => u.Bio).HasMaxLength(2000);
-            b.Property(u => u.City).IsRequired().HasMaxLength(100);
+            b.Property(u => u.City).HasMaxLength(100);
             b.Property(u => u.Location).HasColumnType("geography(Point, 4326)");
             b.Property(u => u.TopArtists).HasColumnType("text[]");
+            b.Ignore(u => u.IsProfileComplete);
         });
 
         modelBuilder.Entity<Festival>(b =>
@@ -42,6 +46,23 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
             b.HasIndex(m => new { m.UserAId, m.UserBId }).IsUnique();
             b.HasOne(m => m.UserA).WithMany().HasForeignKey(m => m.UserAId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(m => m.UserB).WithMany().HasForeignKey(m => m.UserBId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OtpChallenge>(b =>
+        {
+            b.HasKey(o => o.Id);
+            b.Property(o => o.PhoneNumber).IsRequired().HasMaxLength(32);
+            b.Property(o => o.CodeHash).IsRequired().HasMaxLength(512);
+            b.HasIndex(o => new { o.PhoneNumber, o.ExpiresAt });
+        });
+
+        modelBuilder.Entity<RefreshToken>(b =>
+        {
+            b.HasKey(r => r.Id);
+            b.Property(r => r.TokenHash).IsRequired().HasMaxLength(512);
+            b.HasIndex(r => r.TokenHash).IsUnique();
+            b.HasIndex(r => new { r.UserId, r.ExpiresAt });
+            b.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

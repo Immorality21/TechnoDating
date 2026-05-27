@@ -1,5 +1,6 @@
 @page "/festivals"
-@inject HttpClient Http
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
 
 <h1>Upcoming techno nights</h1>
 
@@ -54,7 +55,8 @@ else
     {
         try
         {
-            festivals = await Http.GetFromJsonAsync<FestivalDto[]>("/api/festivals");
+            var http = HttpClientFactory.CreateClient("api");
+            festivals = await http.GetFromJsonAsync<FestivalDto[]>("/api/festivals");
         }
         catch (Exception ex)
         {

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using TechnoDating.Api.Infrastructure.Entities;
@@ -12,6 +13,7 @@ public class DatabaseInitializer(IServiceProvider services, ILogger<DatabaseInit
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<TechnoDatingDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
         logger.LogInformation("Applying database migrations...");
         await db.Database.MigrateAsync(cancellationToken);
@@ -80,75 +82,45 @@ public class DatabaseInitializer(IServiceProvider services, ILogger<DatabaseInit
             },
         };
 
-        var users = new List<User>
-        {
-            new()
-            {
-                Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                Email = "sofie@example.test",
-                DisplayName = "Sofie",
-                DateOfBirth = new DateOnly(1997, 4, 12),
-                Gender = "female",
-                Bio = "Industrial techno and long sets.",
-                City = "Amsterdam",
-                Location = Point(4.90, 52.37),
-                TopArtists = ["Charlotte de Witte", "Amelie Lens", "Reinier Zonneveld"],
-                IsVerified = true,
-                CreatedAt = now,
-                LastActiveAt = now,
-            },
-            new()
-            {
-                Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-                Email = "daan@example.test",
-                DisplayName = "Daan",
-                DateOfBirth = new DateOnly(1994, 11, 3),
-                Gender = "male",
-                Bio = "Melodic techno fan, ADE regular.",
-                City = "Utrecht",
-                Location = Point(5.12, 52.09),
-                TopArtists = ["Mind Against", "Tale Of Us", "Boris Brejcha"],
-                IsVerified = true,
-                CreatedAt = now,
-                LastActiveAt = now,
-            },
-            new()
-            {
-                Id = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
-                Email = "lieke@example.test",
-                DisplayName = "Lieke",
-                DateOfBirth = new DateOnly(1999, 2, 28),
-                Gender = "female",
-                Bio = "Hard techno, no small talk.",
-                City = "Amsterdam",
-                Location = Point(4.92, 52.36),
-                TopArtists = ["Anfisa Letyago", "Indira Paganotto", "I Hate Models"],
-                IsVerified = false,
-                CreatedAt = now,
-                LastActiveAt = now,
-            },
-            new()
-            {
-                Id = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
-                Email = "maud@example.test",
-                DisplayName = "Maud",
-                DateOfBirth = new DateOnly(1996, 8, 21),
-                Gender = "female",
-                Bio = "House over techno, always dancing.",
-                City = "Amsterdam",
-                Location = Point(4.88, 52.38),
-                TopArtists = ["Honey Dijon", "Job Jobse", "Carista"],
-                IsVerified = true,
-                CreatedAt = now,
-                LastActiveAt = now,
-            },
-        };
-
         db.Festivals.AddRange(festivals);
-        db.Users.AddRange(users);
         await db.SaveChangesAsync(cancellationToken);
 
-        logger.LogInformation("Seed complete: {Festivals} festivals, {Users} users.", festivals.Count, users.Count);
+        var seedUsers = new (Guid Id, string Phone, string DisplayName, DateOnly Dob, string Gender, string Bio, string City, Point Location, List<string> TopArtists, bool Verified)[]
+        {
+            (Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), "+31600000001", "Sofie", new DateOnly(1997, 4, 12), "female", "Industrial techno and long sets.", "Amsterdam", Point(4.90, 52.37), ["Charlotte de Witte", "Amelie Lens", "Reinier Zonneveld"], true),
+            (Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), "+31600000002", "Daan", new DateOnly(1994, 11, 3), "male", "Melodic techno fan, ADE regular.", "Utrecht", Point(5.12, 52.09), ["Mind Against", "Tale Of Us", "Boris Brejcha"], true),
+            (Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), "+31600000003", "Lieke", new DateOnly(1999, 2, 28), "female", "Hard techno, no small talk.", "Amsterdam", Point(4.92, 52.36), ["Anfisa Letyago", "Indira Paganotto", "I Hate Models"], false),
+            (Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"), "+31600000004", "Maud", new DateOnly(1996, 8, 21), "female", "House over techno, always dancing.", "Amsterdam", Point(4.88, 52.38), ["Honey Dijon", "Job Jobse", "Carista"], true),
+        };
+
+        foreach (var seed in seedUsers)
+        {
+            var user = new User
+            {
+                Id = seed.Id,
+                UserName = seed.Phone,
+                PhoneNumber = seed.Phone,
+                PhoneNumberConfirmed = true,
+                DisplayName = seed.DisplayName,
+                DateOfBirth = seed.Dob,
+                Gender = seed.Gender,
+                Bio = seed.Bio,
+                City = seed.City,
+                Location = seed.Location,
+                TopArtists = seed.TopArtists,
+                IsVerified = seed.Verified,
+                CreatedAt = now,
+                LastActiveAt = now,
+            };
+
+            var result = await userManager.CreateAsync(user);
+            if (!result.Succeeded)
+            {
+                logger.LogError("Failed to seed user {Phone}: {Errors}", seed.Phone, string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+        }
+
+        logger.LogInformation("Seed complete: {Festivals} festivals, {Users} users.", festivals.Count, seedUsers.Length);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
