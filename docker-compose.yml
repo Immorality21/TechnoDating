@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgis/postgis:16-3.4
     container_name: technodating-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: technodating
       POSTGRES_PASSWORD: dev
