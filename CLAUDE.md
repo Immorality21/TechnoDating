@@ -15,7 +15,8 @@ Working tagline candidates:
 
 - **.NET MAUI Blazor Hybrid** — committed. UI is Razor components inside a `BlazorWebView`, not XAML pages. One codebase → iOS / Android / Windows / MacCatalyst.
 - **.NET 10** (currently preview SDK `10.0.300-preview.0.26177.108`).
-- **ASP.NET Core minimal APIs** for the backend.
+- **ASP.NET Core controllers + MediatR vertical slice** for the backend.
+- **ASP.NET Core Identity (`IdentityCore`) + JWT bearer** for auth — phone-OTP-only sign-in, no passwords. Identity used as user store + lockout + security-stamp invalidation; *not* used for cookie/SignInManager pipelines.
 - **SignalR** confirmed for real-time (chat, presence, match notifications, on-festival meetup coordination).
 - **Monorepo / single solution** (`TechnoDating.slnx`) — Mobile + Api + shared Contracts live in one solution, atomic PRs across the stack.
 
@@ -26,18 +27,29 @@ TechnoDating.slnx
 docker-compose.yml             ← Postgres + PostGIS for local dev
 dotnet-tools.json              ← local dotnet-ef tool pinned
 └── src/
-    ├── TechnoDating/             ← MAUI Blazor Hybrid app
-    ├── TechnoDating.Api/         ← ASP.NET Core controllers + MediatR (vertical slice)
+    ├── TechnoDating/                 ← MAUI Blazor Hybrid app
+    │   ├── Components/
+    │   │   ├── Pages/
+    │   │   │   ├── Auth/             ← Login.razor, VerifyOtp.razor, Onboarding.razor
+    │   │   │   └── Profile.razor, Home.razor, Festivals.razor, Matches.razor
+    │   │   ├── Layout/               ← MainLayout, NavMenu
+    │   │   ├── Routes.razor          ← awaits TryRestoreFromStorage before mounting Router
+    │   │   ├── RedirectToLogin.razor ← used by <AuthorizeRouteView>'s <NotAuthorized>
+    │   │   └── ProfileCompleteGuard.razor ← redirects authed-but-incomplete users to /onboarding
+    │   └── Services/                 ← AuthStateService, AuthMessageHandler, AuthenticationStateProvider
+    ├── TechnoDating.Api/             ← ASP.NET Core controllers + MediatR (vertical slice)
     │   ├── Application/
-    │   │   ├── Festivals/        ← FestivalsController + Requests/ + Handlers/
-    │   │   └── Matches/          ← MatchesController + Requests/ + Handlers/
+    │   │   ├── Auth/                 ← AuthController + Requests/ + Handlers/ + IOtpSender/IOtpService/ITokenService
+    │   │   ├── Users/                ← UsersController + Requests/ + Handlers/ + UserMappingExtensions
+    │   │   ├── Festivals/            ← FestivalsController + Requests/ + Handlers/
+    │   │   └── Matches/              ← MatchesController + Requests/ + Handlers/
     │   └── Infrastructure/
-    │       ├── Entities/         ← User, Festival, Match
-    │       ├── TechnoDatingDbContext.cs
-    │       ├── Migrations/       ← EF Core migrations
-    │       └── Seeding/          ← DatabaseInitializer (IHostedService)
-    ├── TechnoDating.Contracts/   ← DTOs shared by Mobile + Api
-    └── TechnoDating.Workers/     ← (later) background services
+    │       ├── Entities/             ← User (IdentityUser<Guid>), Festival, Match, OtpChallenge, RefreshToken
+    │       ├── TechnoDatingDbContext.cs   ← IdentityDbContext<User, IdentityRole<Guid>, Guid>
+    │       ├── Migrations/           ← EF Core migrations
+    │       └── Seeding/              ← DatabaseInitializer (IHostedService)
+    ├── TechnoDating.Contracts/       ← DTOs shared by Mobile + Api
+    └── TechnoDating.Workers/         ← (later) background services
 ```
 
 Application + Infrastructure both live **inside the Api project** as folders. Don't pre-create empty projects — promote folders to projects only when there's a concrete need (e.g. a Workers process needing its own host).
@@ -52,11 +64,14 @@ Application + Infrastructure both live **inside the Api project** as folders. Do
 
 ### Entities (current)
 
-- `User` — Id, Email (unique), DisplayName, DateOfBirth, Gender, Bio, City, Location (`Point`, SRID 4326), TopArtists (text[]), IsVerified, CreatedAt, LastActiveAt
+- `User` — inherits `IdentityUser<Guid>` (Identity provides `Id`, `UserName`, `PhoneNumber`, `PhoneNumberConfirmed`, `SecurityStamp`, `ConcurrencyStamp`, `LockoutEnd`, `AccessFailedCount`, etc.). Domain fields on top: `DisplayName?`, `DateOfBirth?`, `Gender?`, `Bio?`, `City?`, `Location` (`Point`, SRID 4326), `TopArtists` (text[]), `IsVerified`, `CreatedAt`, `LastActiveAt`. **The four required domain fields are nullable** — they get populated during onboarding, not at OTP-verify time. `IsProfileComplete` is a computed (`[NotMapped]`-style) property: `DisplayName != null && DateOfBirth != null && Gender != null && City != null`.
 - `Festival` — Id, Name, Date, City, Venue, HeadlineArtists (text[]), Location
 - `Match` — Id, UserAId, UserBId, MatchedAt (unique (UserAId, UserBId))
+- `OtpChallenge` — Id, PhoneNumber, CodeHash (PBKDF2 via `IPasswordHasher<OtpChallenge>`), ExpiresAt, AttemptCount, ConsumedAt?, CreatedAt. Indexed on `(PhoneNumber, ExpiresAt)`.
+- `RefreshToken` — Id, UserId (FK→User), TokenHash (SHA-256 hex of plaintext), IssuedAt, ExpiresAt, RevokedAt?, ReplacedByTokenId? (rotation chain). Unique index on TokenHash.
+- Plus the six Identity tables: `AspNetUsers`, `AspNetUserClaims`, `AspNetUserLogins`, `AspNetUserTokens`, `AspNetUserRoles`, `AspNetRoles`, `AspNetRoleClaims`.
 
-**Not yet modelled** (TODOs as they become relevant): `UserFestivalAttendance` (many-to-many — needed for "CommonFestivals" on `MatchProfileDto`), authentication / identity store, photos, swipe/like events, messages.
+**Not yet modelled** (TODOs as they become relevant): `UserFestivalAttendance` (many-to-many — needed for "CommonFestivals" on `MatchProfileDto`), photos, swipe/like events, messages, iDIN verification result store.
 
 ### API architecture (vertical slice + MediatR)
 
@@ -67,6 +82,27 @@ Application + Infrastructure both live **inside the Api project** as folders. Do
 - **MediatR pinned to `12.5.0`** — the last MIT-licensed version. v13+ is commercial.
 - MediatR registration in `Program.cs` scans the API assembly:
   `builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));`
+
+### Authentication (phone OTP + JWT)
+
+- **Primary auth = phone OTP.** No passwords. No email/social login (yet). Industry-standard for dating apps (Tinder/Bumble/Hinge/WhatsApp).
+- **Endpoints** (`Application/Auth/AuthController`, no `[Authorize]`):
+  - `POST /api/auth/request-otp` → generates 6-digit code, hashes via `PasswordHasher<OtpChallenge>`, fires `IOtpSender`. Enforces a 60s per-phone resend cooldown.
+  - `POST /api/auth/verify-otp` → verifies code; on success finds the user by phone or **auto-creates one** with only `PhoneNumber` + `UserName` populated (industry pattern — new users land in an incomplete state and complete onboarding next). Returns `{ accessToken, refreshToken, user }`.
+  - `POST /api/auth/refresh` → token rotation (revokes old, sets `ReplacedByTokenId`, issues new pair).
+  - `POST /api/auth/logout` → revokes the supplied refresh token.
+- **JWT** (`TokenService`): HS256, 15-min access tokens, 60-day refresh tokens. Claims: `sub`, `jti`, `security_stamp`, `phone_number`. `JwtBearer.OnTokenValidated` re-checks `security_stamp` against the DB on every request — bumping the stamp invalidates all outstanding tokens (used for phone-change / logout-everywhere).
+- **OTP delivery**: `IOtpSender` abstraction. Dev = `ConsoleOtpSender` (logs `[OTP] {phone}: {code}` via `ILogger`). Twilio/MessageBird is the future prod swap-in — code is unchanged elsewhere.
+- **Identity wiring**: `AddIdentityCore<User>()` (NOT `AddIdentity` — we don't want the cookie/SignInManager pipeline). Lockout is on: 5 failed attempts → 15-min lockout. `IPasswordHasher<OtpChallenge>` registered as a singleton (PBKDF2 is overkill for short-lived OTPs but it's already in the box).
+- **Config keys**:
+  - `Jwt:Issuer`, `Jwt:Audience`, `Jwt:SigningKey`, `Jwt:AccessTokenMinutes`, `Jwt:RefreshTokenDays`. Signing key lives in `appsettings.Development.json` for dev; prod must come from env/Key Vault.
+  - `Otp:CodeLength`, `Otp:LifetimeMinutes`, `Otp:MaxAttempts`, `Otp:ResendCooldownSeconds`.
+- **Mobile auth state**: `AuthStateService` (singleton) holds the access token in memory and persists the refresh token in MAUI `SecureStorage` (Keychain on iOS, Keystore on Android). `AuthMessageHandler` is a `DelegatingHandler` that attaches `Authorization: Bearer` and on a 401 calls `RefreshAsync()` + retries once. `TechnoDatingAuthenticationStateProvider` bridges `IAuthStateService` → Blazor's `<AuthorizeView>` / `<AuthorizeRouteView>`.
+- **Two named HttpClients in `MauiProgram.cs`**:
+  - `"auth"` — no message handler. Used by `AuthStateService` for `/api/auth/*` so refresh attempts don't recurse through the auth handler.
+  - `"api"` — has `AuthMessageHandler`. Used by every other component.
+- **Routing gate**: `Routes.razor` awaits `Auth.TryRestoreFromStorageAsync()` before mounting the `<Router>`. Default route policy is `@attribute [Authorize]` (set per-page on Home/Festivals/Matches/Profile/Onboarding); `Login` and `VerifyOtp` are intentionally public. `<AuthorizeRouteView>` with a `<NotAuthorized>` template → `<RedirectToLogin>` handles the unauth case. `ProfileCompleteGuard` (mounted in `MainLayout`) listens to `NavigationManager.LocationChanged` + `Auth.OnAuthStateChanged` and redirects authenticated-but-incomplete users to `/onboarding` (allowlists `/login`, `/verify-otp`, `/onboarding` to prevent loops).
+- **Onboarding contract**: `UserProfileDto` exposes a server-computed `IsProfileComplete` bool. Clients route purely on that — if the required-field list changes, only the server changes.
 
 ### Hot-reload-friendly patterns
 
@@ -245,6 +281,9 @@ Interfaces in `Application`, implementations in `Infrastructure`. Keep them off 
 - **First-time setup**: `docker compose up -d` to start Postgres. The first API run auto-applies migrations and seeds.
 - **Daily**: `docker compose up -d` (idempotent — fast no-op if already running) → F5 the multi-startup in VS, or `dotnet run --project src/TechnoDating.Api` + `dotnet build -t:Run -f net10.0-windows10.0.19041.0 src/TechnoDating`.
 - **Reset DB**: `docker compose down -v` (drops the volume → next run re-seeds).
+- **DB container restart policy**: `unless-stopped` — it'll come back automatically after Docker Desktop / system restarts.
+- **Login in dev**: seeded users have phones `+31600000001`–`+31600000004` (Sofie / Daan / Lieke / Maud). Hit `request-otp` with any of them, watch the API console for `[OTP] +31600000001: 123456`, paste into the verify screen. For new-user signup flow, use any unseeded `+31...` number — the user is auto-created and routed to `/onboarding`.
+- **Inspect DB**: DBeaver Community installed via winget. Connection: `localhost:5432` / db=`technodating` / user=`technodating` / pw=`dev`. PostGIS `Location` columns show as binary by default — query with `ST_AsText(location)` for readable coordinates.
 
 ## Session log
 
@@ -254,3 +293,4 @@ Interfaces in `Application`, implementations in `Infrastructure`. Keep them off 
 - **2026-05-25** — Locked: techno launch scene, Amsterdam likely launch city, MAUI Blazor Hybrid committed, SignalR for real-time, monorepo solution layout. Restructured repo into `src/` with `TechnoDating` (mobile), `TechnoDating.Api`, `TechnoDating.Contracts`. Scaffolded minimal API with `/api/festivals` + `/api/matches` returning test data; mobile fetches and displays them. Profile verification added as a first-class product TODO (iDIN + live selfie + behavioural signals).
 - **2026-05-25** — Refactored API from minimal endpoints to controllers + MediatR vertical slice. Pinned MediatR to **12.5.0** (last MIT release; 13+ is commercial). Adopted feature-folder layout: `Application/[Feature]/[Feature]Controller.cs` + `Requests/` + `Handlers/`. Test data moved inline into handler method bodies so it survives Hot Reload (static field initializers don't re-run).
 - **2026-05-25** — Database stack: Postgres + PostGIS via Docker Compose; EF Core 10 + Npgsql + NetTopologySuite. Added `Infrastructure/` folder inside Api with `TechnoDatingDbContext`, `User`/`Festival`/`Match` entities (User has `geography(Point, 4326)` location + `TopArtists text[]`), initial migration, and a `DatabaseInitializer` IHostedService that migrates + seeds on startup. Both handlers now read from the DB; matches are ordered by PostGIS `ST_Distance` from a placeholder Amsterdam-centre point. `dotnet-ef` installed as a local tool.
+- **2026-05-27** — Added phone-OTP auth + JWT + user profile + onboarding. Backend: `User` inherits `IdentityUser<Guid>` (required domain fields made nullable), new `OtpChallenge` + `RefreshToken` entities, `IdentityDbContext` base. `Application/Auth/` (controller + handlers + `IOtpSender`/`ConsoleOtpSender`/`IOtpService`/`ITokenService`) and `Application/Users/` (`/me` GET/PUT). `[Authorize]` on Festivals/Matches; `GetMatchesHandler` now uses the current user's `Location` and excludes self. `Program.cs` wires `AddIdentityCore` + `AddJwtBearer` with `OnTokenValidated` re-checking the `security_stamp` claim. Migration rebuilt as a fresh `Initial`. Seeded users got phones `+31600000001`–`04`. Mobile: `AuthStateService` (in-memory access token + `SecureStorage`-backed refresh token), `AuthMessageHandler` (Bearer + refresh-on-401), `TechnoDatingAuthenticationStateProvider`. Named HttpClients `"auth"` / `"api"`. New pages: `Login`, `VerifyOtp`, `Onboarding`, `Profile`. `Routes.razor` awaits token restore; `<AuthorizeRouteView>` + `RedirectToLogin` handle unauth; `ProfileCompleteGuard` redirects authed-but-incomplete users to `/onboarding`. Backend smoke-tested end-to-end (existing user + new user + refresh rotation + lockout). Added `restart: unless-stopped` to the Postgres container; DBeaver Community installed for DB inspection.
