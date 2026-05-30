@@ -3,4 +3,4 @@ using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Festivals.Requests;
 
-public record GetFestivalsRequest() : IRequest<IReadOnlyList<FestivalDto>>;
+public record GetFestivalsRequest(Guid CurrentUserId) : IRequest<IReadOnlyList<FestivalDto>>;

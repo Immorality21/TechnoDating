@@ -7,4 +7,6 @@ public record FestivalDto(
     string City,
     string Venue,
     IReadOnlyList<string> HeadlineArtists,
-    int MatchingPeopleCount);
+    int AttendingCount,
+    int MatchingArtistsCount,
+    AttendanceStatus? MyStatus);

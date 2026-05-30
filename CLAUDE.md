@@ -1,6 +1,8 @@
 # TechnoDating — Project Context
 
 > Living document of strategic direction, USP exploration, and competitive context. Maintained across sessions. Update as decisions firm up or change.
+>
+> **Companion file:** [`BACKLOG.md`](BACKLOG.md) — future-feature ideas not on the current build path, grouped by tier. Append new ideas there; promote into `CLAUDE.md` when an item enters active development.
 
 ## Elevator pitch (working)
 
@@ -41,10 +43,11 @@ dotnet-tools.json              ← local dotnet-ef tool pinned
     │   ├── Application/
     │   │   ├── Auth/                 ← AuthController + Requests/ + Handlers/ + IOtpSender/IOtpService/ITokenService
     │   │   ├── Users/                ← UsersController + Requests/ + Handlers/ + UserMappingExtensions
-    │   │   ├── Festivals/            ← FestivalsController + Requests/ + Handlers/
+    │   │   ├── Attendance/           ← AttendanceController + Requests/ + Handlers/ (per-user festival attendance)
+    │   │   ├── Festivals/            ← FestivalsController + Requests/ + Handlers/ (list + per-festival attendees)
     │   │   └── Matches/              ← MatchesController + Requests/ + Handlers/
     │   └── Infrastructure/
-    │       ├── Entities/             ← User (IdentityUser<Guid>), Festival, Match, OtpChallenge, RefreshToken
+    │       ├── Entities/             ← User (IdentityUser<Guid>), Festival, Match, OtpChallenge, RefreshToken, UserFestivalAttendance
     │       ├── TechnoDatingDbContext.cs   ← IdentityDbContext<User, IdentityRole<Guid>, Guid>
     │       ├── Migrations/           ← EF Core migrations
     │       └── Seeding/              ← DatabaseInitializer (IHostedService)
@@ -66,12 +69,13 @@ Application + Infrastructure both live **inside the Api project** as folders. Do
 
 - `User` — inherits `IdentityUser<Guid>` (Identity provides `Id`, `UserName`, `PhoneNumber`, `PhoneNumberConfirmed`, `SecurityStamp`, `ConcurrencyStamp`, `LockoutEnd`, `AccessFailedCount`, etc.). Domain fields on top: `DisplayName?`, `DateOfBirth?`, `Gender?`, `Bio?`, `City?`, `Location` (`Point`, SRID 4326), `TopArtists` (text[]), `IsVerified`, `CreatedAt`, `LastActiveAt`. **The four required domain fields are nullable** — they get populated during onboarding, not at OTP-verify time. `IsProfileComplete` is a computed (`[NotMapped]`-style) property: `DisplayName != null && DateOfBirth != null && Gender != null && City != null`.
 - `Festival` — Id, Name, Date, City, Venue, HeadlineArtists (text[]), Location
-- `Match` — Id, UserAId, UserBId, MatchedAt (unique (UserAId, UserBId))
+- `Match` — Id, UserAId, UserBId, MatchedAt (unique (UserAId, UserBId)) — confirmed mutual matches; not yet wired in (empty).
 - `OtpChallenge` — Id, PhoneNumber, CodeHash (PBKDF2 via `IPasswordHasher<OtpChallenge>`), ExpiresAt, AttemptCount, ConsumedAt?, CreatedAt. Indexed on `(PhoneNumber, ExpiresAt)`.
 - `RefreshToken` — Id, UserId (FK→User), TokenHash (SHA-256 hex of plaintext), IssuedAt, ExpiresAt, RevokedAt?, ReplacedByTokenId? (rotation chain). Unique index on TokenHash.
+- `UserFestivalAttendance` — Id, UserId (FK→User, cascade), FestivalId (FK→Festival, cascade), Status (`AttendanceStatus` enum stored as varchar via `.HasConversion<string>()`), CreatedAt, UpdatedAt. Unique on `(UserId, FestivalId)`; index on `FestivalId`. `AttendanceStatus` lives in `Contracts` and is `Interested | Going | Ticketed` — JSON-serialised as string via `[JsonConverter(typeof(JsonStringEnumConverter<AttendanceStatus>))]`. **"No row" = no status** (no fourth enum value); DELETE the row to revert to that state.
 - Plus the six Identity tables: `AspNetUsers`, `AspNetUserClaims`, `AspNetUserLogins`, `AspNetUserTokens`, `AspNetUserRoles`, `AspNetRoles`, `AspNetRoleClaims`.
 
-**Not yet modelled** (TODOs as they become relevant): `UserFestivalAttendance` (many-to-many — needed for "CommonFestivals" on `MatchProfileDto`), photos, swipe/like events, messages, iDIN verification result store.
+**Not yet modelled** (TODOs as they become relevant): photos, swipe/like events, messages, iDIN verification result store, ticket-verification audit log.
 
 ### API architecture (vertical slice + MediatR)
 
@@ -103,6 +107,19 @@ Application + Infrastructure both live **inside the Api project** as folders. Do
   - `"api"` — has `AuthMessageHandler`. Used by every other component.
 - **Routing gate**: `Routes.razor` awaits `Auth.TryRestoreFromStorageAsync()` before mounting the `<Router>`. Default route policy is `@attribute [Authorize]` (set per-page on Home/Festivals/Matches/Profile/Onboarding); `Login` and `VerifyOtp` are intentionally public. `<AuthorizeRouteView>` with a `<NotAuthorized>` template → `<RedirectToLogin>` handles the unauth case. `ProfileCompleteGuard` (mounted in `MainLayout`) listens to `NavigationManager.LocationChanged` + `Auth.OnAuthStateChanged` and redirects authenticated-but-incomplete users to `/onboarding` (allowlists `/login`, `/verify-otp`, `/onboarding` to prevent loops).
 - **Onboarding contract**: `UserProfileDto` exposes a server-computed `IsProfileComplete` bool. Clients route purely on that — if the required-field list changes, only the server changes.
+
+### Festival attendance + matching signal
+
+- **Attendance is a link table, not a list on the user.** `UserFestivalAttendance` (entity above) carries the relation. Status is the `AttendanceStatus` enum (`Interested | Going | Ticketed`), persisted as a varchar string. No row at all = no status — DELETE the row to clear.
+- **Endpoints** (`Application/Attendance/AttendanceController`, `[Authorize]`):
+  - `GET /api/attendance` → current user's attendance list (`IReadOnlyList<FestivalAttendanceDto>` ordered by festival date).
+  - `PUT /api/attendance/{festivalId}` → upsert with body `{ status }`.
+  - `DELETE /api/attendance/{festivalId}` → revert to "no status".
+- **Plus a festival-scoped endpoint**: `GET /api/festivals/{id}/attendees` returns the other users marked attending (any status) with PostGIS distance — used by the festival detail page for the "who's going" view.
+- **`AttendingCount` semantics**: counts only `Going + Ticketed`, not `Interested`. Interested is soft — useful for matching/discovery, not for "how many people are going."
+- **Match ordering boost**: `GetMatchesHandler` orders candidates by `(SharedFestivalCount DESC, Distance ASC)`. Shared count is the intersection of the current user's `Going|Ticketed` festivals with the candidate's. `CommonFestivals` on `MatchProfileDto` carries the festival *names* of that intersection — clients display them directly.
+- **`MatchingArtistsCount` on `FestivalDto`** is the intersection of the festival's `HeadlineArtists` with the current user's `TopArtists` (case-insensitive). Computed in-memory in `GetFestivalsHandler` after the festival list comes back — fine at current scale, would move to a per-user materialised view eventually.
+- **PostGIS distance gotcha**: distance must be computed **inside** the EF query (translates to `ST_Distance` in PostGIS meters). After `ToListAsync`, NetTopologySuite's `Point.Distance` returns coordinate-system units (degrees for WGS84) — useless. Always project `Distance` into an anonymous type within the `.Select` before materialising.
 
 ### Hot-reload-friendly patterns
 
@@ -247,32 +264,9 @@ Static field initializers don't re-run on Hot Reload — they're a silent trap. 
 - [ ] **Winter strategy** — clubs and smaller venues vs leaning into ADE preparation hype
 - [ ] **The "one-sentence point of view"** — final wording
 
-## Product TODOs (have a place in the build)
+## Product TODOs
 
-### Profile verification (women's safety / anti-catfishing / anti-stalking)
-Non-negotiable. Likely a layered approach:
-- **iDIN** (Dutch bank-based identity verification) — gives real name + age, ties to a single account, kills duplicate/fake accounts. Most NL users already use this for banking/government.
-- **Live selfie** at signup + optionally before every first date (Breeze does this).
-- **Ticket-based attestation** — if you say you're going to X, the verified ticket proves it.
-- **Behavioural signals** — "shows up to dates," "replies thoughtfully," surfaced as earned trust badges (not user-facing ratings — too creepy).
-- **Reporting + blocking** with fast moderator response. Aggressive removal of repeat offenders.
-- Women-first marketing: the safety story is a USP, not a footnote.
-
-### Background work (Api / Workers)
-Start with `IHostedService` + `System.Threading.Channels` for in-process queueing. Promote to **Hangfire** only when we need persistence, retries, or a dashboard.
-- Matching algorithm runs (nightly or event-driven)
-- Spotify re-syncs (token refresh + listening history)
-- Festival/ticket data refresh (scraped or partner-fed)
-- Photo moderation (NSFW/face detection)
-- Notification fan-out (push, email)
-
-### External integrations
-Interfaces in `Application`, implementations in `Infrastructure`. Keep them off the API hot path with the queueing pattern above.
-- **Spotify** (OAuth, listening history, recently played, top artists/tracks)
-- **Ticketing**: Paylogic (NL-heavy), Eventbrite, Ticketmaster, Festicket. API access varies — partnerships likely needed; email parsing of forwarded confirmations is a documented fallback.
-- **iDIN** (verification)
-- **Photo moderation** (AWS Rekognition / Azure Content Safety / Hive)
-- **Push notifications** (FCM + APNs, or a unifier like OneSignal)
+All future-feature ideas — profile verification (iDIN, live selfie, ticket attestation, behavioural badges, mod queue), background-work infrastructure, external integrations (Spotify, ticketing providers, push), revenue alignment, on-festival meetup coordinator, festival cohort chats, subculture-aware matching, etc. — live in [`BACKLOG.md`](BACKLOG.md), grouped by tier. Promote items into this file's session log + relevant section when they enter active development.
 
 ## Local development notes
 
@@ -294,3 +288,4 @@ Interfaces in `Application`, implementations in `Infrastructure`. Keep them off 
 - **2026-05-25** — Refactored API from minimal endpoints to controllers + MediatR vertical slice. Pinned MediatR to **12.5.0** (last MIT release; 13+ is commercial). Adopted feature-folder layout: `Application/[Feature]/[Feature]Controller.cs` + `Requests/` + `Handlers/`. Test data moved inline into handler method bodies so it survives Hot Reload (static field initializers don't re-run).
 - **2026-05-25** — Database stack: Postgres + PostGIS via Docker Compose; EF Core 10 + Npgsql + NetTopologySuite. Added `Infrastructure/` folder inside Api with `TechnoDatingDbContext`, `User`/`Festival`/`Match` entities (User has `geography(Point, 4326)` location + `TopArtists text[]`), initial migration, and a `DatabaseInitializer` IHostedService that migrates + seeds on startup. Both handlers now read from the DB; matches are ordered by PostGIS `ST_Distance` from a placeholder Amsterdam-centre point. `dotnet-ef` installed as a local tool.
 - **2026-05-27** — Added phone-OTP auth + JWT + user profile + onboarding. Backend: `User` inherits `IdentityUser<Guid>` (required domain fields made nullable), new `OtpChallenge` + `RefreshToken` entities, `IdentityDbContext` base. `Application/Auth/` (controller + handlers + `IOtpSender`/`ConsoleOtpSender`/`IOtpService`/`ITokenService`) and `Application/Users/` (`/me` GET/PUT). `[Authorize]` on Festivals/Matches; `GetMatchesHandler` now uses the current user's `Location` and excludes self. `Program.cs` wires `AddIdentityCore` + `AddJwtBearer` with `OnTokenValidated` re-checking the `security_stamp` claim. Migration rebuilt as a fresh `Initial`. Seeded users got phones `+31600000001`–`04`. Mobile: `AuthStateService` (in-memory access token + `SecureStorage`-backed refresh token), `AuthMessageHandler` (Bearer + refresh-on-401), `TechnoDatingAuthenticationStateProvider`. Named HttpClients `"auth"` / `"api"`. New pages: `Login`, `VerifyOtp`, `Onboarding`, `Profile`. `Routes.razor` awaits token restore; `<AuthorizeRouteView>` + `RedirectToLogin` handle unauth; `ProfileCompleteGuard` redirects authed-but-incomplete users to `/onboarding`. Backend smoke-tested end-to-end (existing user + new user + refresh rotation + lockout). Added `restart: unless-stopped` to the Postgres container; DBeaver Community installed for DB inspection.
+- **2026-05-30** — Festival attendance + Tier-1 matching signal. New `UserFestivalAttendance` link table with `AttendanceStatus` enum (`Interested | Going | Ticketed`, stored as varchar). `Application/Attendance/` vertical slice (GET/PUT/DELETE `/api/attendance[/{festivalId}]`). `Application/Festivals/` extended with `GET /api/festivals/{id}/attendees` (per-festival match view — the "forcing function" UX). `GetFestivalsHandler` now returns `AttendingCount` (Going + Ticketed), the current user's `MyStatus`, and `MatchingArtistsCount` (intersection of headliners ∩ user's TopArtists). `GetMatchesHandler` orders by `(SharedFestivalCount DESC, Distance ASC)` and populates `CommonFestivals` with the overlap festival names. Seeder gained 12 attendance rows so the matches feed has real shared-festival data out of the box. Mobile: festivals page got an inline `Status` dropdown wired to PUT/DELETE, plus a clickable festival → new `/festivals/{id}` detail page showing the festival + "who's going" list. JSON enum serialisation forced to string via `[JsonConverter(typeof(JsonStringEnumConverter<>))]` on the enum type itself (works both directions without per-call options). Also created `BACKLOG.md` at project root — Tier 2-5 ideas (ticket-email verification, on-festival meetup coordinator, scene-aware matching, pay-per-meetup, etc.) live there, referenced from this file. **PostGIS gotcha learned and documented**: `Point.Distance` is degrees in-memory but `ST_Distance` (meters) when projected inside an EF query — always project distance into the anonymous type before `ToListAsync`.

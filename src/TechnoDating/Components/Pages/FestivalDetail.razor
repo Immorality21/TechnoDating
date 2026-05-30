@@ -1,0 +1,126 @@
+@page "/festivals/{FestivalId:guid}"
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
+
+@if (loadError is not null)
+{
+    <div class="alert alert-danger">
+        <div><code>@loadError</code></div>
+    </div>
+}
+else if (festival is null)
+{
+    <p><em>Loading…</em></p>
+}
+else
+{
+    <p class="mb-2"><a href="/festivals">← All festivals</a></p>
+    <h1>@festival.Name</h1>
+    <p class="text-muted">
+        @festival.Date.ToString("dddd d MMMM yyyy") · @festival.City · @festival.Venue
+    </p>
+
+    <div class="mb-3">
+        <strong>Lineup highlights:</strong> @string.Join(" · ", festival.HeadlineArtists)
+        @if (festival.MatchingArtistsCount > 0)
+        {
+            <span class="badge bg-success ms-2">@festival.MatchingArtistsCount of your top artists</span>
+        }
+    </div>
+
+    <div class="mb-3 d-flex align-items-center gap-2">
+        <span><strong>Your status:</strong></span>
+        <select class="form-select form-select-sm" style="max-width:200px" value="@(festival.MyStatus?.ToString() ?? "")"
+                @onchange="@(async e => await OnStatusChanged(e.Value as string))">
+            <option value="">— (not set)</option>
+            <option value="Interested">Interested</option>
+            <option value="Going">Going</option>
+            <option value="Ticketed">Ticketed</option>
+        </select>
+        <span class="text-muted small">@festival.AttendingCount going</span>
+    </div>
+
+    <h2 class="mt-4">Who's going</h2>
+    @if (attendees is null)
+    {
+        <p><em>Loading…</em></p>
+    }
+    else if (attendees.Length == 0)
+    {
+        <p class="text-muted">Nobody you'd match with has marked themselves as attending yet.</p>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var a in attendees)
+            {
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title mb-1">@a.DisplayName, @a.Age</h5>
+                            <h6 class="card-subtitle text-muted mb-3">
+                                @a.City · @a.DistanceKm.ToString("0.#") km away
+                            </h6>
+                            <p class="mb-0"><strong>Top artists:</strong> @string.Join(" · ", a.TopArtists)</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public Guid FestivalId { get; set; }
+
+    private FestivalDto? festival;
+    private MatchProfileDto[]? attendees;
+    private string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var http = HttpClientFactory.CreateClient("api");
+            var list = await http.GetFromJsonAsync<FestivalDto[]>("/api/festivals");
+            festival = list?.FirstOrDefault(f => f.Id == FestivalId);
+            if (festival is null)
+            {
+                loadError = "Festival not found.";
+                return;
+            }
+            attendees = await http.GetFromJsonAsync<MatchProfileDto[]>($"/api/festivals/{FestivalId}/attendees");
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+    }
+
+    private async Task OnStatusChanged(string? raw)
+    {
+        var http = HttpClientFactory.CreateClient("api");
+        try
+        {
+            if (string.IsNullOrEmpty(raw))
+            {
+                await http.DeleteAsync($"/api/attendance/{FestivalId}");
+            }
+            else if (Enum.TryParse<AttendanceStatus>(raw, out var status))
+            {
+                await http.PutAsJsonAsync($"/api/attendance/{FestivalId}", new UpsertAttendanceDto(status));
+            }
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+    }
+}

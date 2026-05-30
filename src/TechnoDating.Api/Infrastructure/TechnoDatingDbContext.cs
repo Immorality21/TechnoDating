@@ -12,6 +12,7 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<UserFestivalAttendance> Attendances => Set<UserFestivalAttendance>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +64,16 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
             b.HasIndex(r => r.TokenHash).IsUnique();
             b.HasIndex(r => new { r.UserId, r.ExpiresAt });
             b.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserFestivalAttendance>(b =>
+        {
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
+            b.HasIndex(a => new { a.UserId, a.FestivalId }).IsUnique();
+            b.HasIndex(a => a.FestivalId);
+            b.HasOne(a => a.User).WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(a => a.Festival).WithMany().HasForeignKey(a => a.FestivalId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

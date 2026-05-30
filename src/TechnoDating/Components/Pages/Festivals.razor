@@ -1,6 +1,7 @@
 @page "/festivals"
 @attribute [Authorize]
 @inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Nav
 
 <h1>Upcoming techno nights</h1>
 
@@ -20,15 +21,16 @@ else if (loadError is not null)
 }
 else
 {
-    <table class="table">
+    <table class="table align-middle">
         <thead>
             <tr>
                 <th>Date</th>
                 <th>Festival</th>
                 <th>City</th>
-                <th>Venue</th>
                 <th>Lineup highlights</th>
-                <th class="text-end">Matches going</th>
+                <th class="text-end">Going</th>
+                <th class="text-end">Your top artists</th>
+                <th>Your status</th>
             </tr>
         </thead>
         <tbody>
@@ -36,11 +38,32 @@ else
             {
                 <tr>
                     <td>@f.Date.ToString("ddd d MMM yyyy")</td>
-                    <td><strong>@f.Name</strong></td>
+                    <td>
+                        <a href="@($"/festivals/{f.Id}")"><strong>@f.Name</strong></a>
+                        <div class="text-muted small">@f.Venue</div>
+                    </td>
                     <td>@f.City</td>
-                    <td>@f.Venue</td>
                     <td>@string.Join(" · ", f.HeadlineArtists)</td>
-                    <td class="text-end">@f.MatchingPeopleCount</td>
+                    <td class="text-end">@f.AttendingCount</td>
+                    <td class="text-end">
+                        @if (f.MatchingArtistsCount > 0)
+                        {
+                            <span class="badge bg-success">@f.MatchingArtistsCount match@(f.MatchingArtistsCount > 1 ? "es" : "")</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" value="@(f.MyStatus?.ToString() ?? "")"
+                                @onchange="@(async e => await OnStatusChanged(f.Id, e.Value as string))">
+                            <option value="">—</option>
+                            <option value="Interested">Interested</option>
+                            <option value="Going">Going</option>
+                            <option value="Ticketed">Ticketed</option>
+                        </select>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -53,10 +76,36 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
         try
         {
             var http = HttpClientFactory.CreateClient("api");
             festivals = await http.GetFromJsonAsync<FestivalDto[]>("/api/festivals");
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+    }
+
+    private async Task OnStatusChanged(Guid festivalId, string? raw)
+    {
+        var http = HttpClientFactory.CreateClient("api");
+        try
+        {
+            if (string.IsNullOrEmpty(raw))
+            {
+                await http.DeleteAsync($"/api/attendance/{festivalId}");
+            }
+            else if (Enum.TryParse<AttendanceStatus>(raw, out var status))
+            {
+                await http.PutAsJsonAsync($"/api/attendance/{festivalId}", new UpsertAttendanceDto(status));
+            }
+            await LoadAsync();
         }
         catch (Exception ex)
         {
