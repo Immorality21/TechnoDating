@@ -11,32 +11,23 @@ public class SetPrimaryPhotoHandler(TechnoDatingDbContext db, IBlobStorage stora
 {
     public async Task<PhotoDto?> Handle(SetPrimaryPhotoRequest request, CancellationToken cancellationToken)
     {
-        var target = await db.Photos
+        var photo = await db.Photos
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == request.PhotoId && p.UserId == request.UserId, cancellationToken);
-        if (target is null)
+        if (photo is null)
         {
             return null;
         }
 
-        if (target.IsPrimary)
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
+        if (user is null)
         {
-            return target.ToDto(storage);
+            return null;
         }
 
-        // Clear current primary(ies) before setting the new one to keep the
-        // filtered unique index happy (WHERE IsPrimary = true).
-        var current = await db.Photos
-            .Where(p => p.UserId == request.UserId && p.IsPrimary && p.Id != target.Id)
-            .ToListAsync(cancellationToken);
-        foreach (var p in current)
-        {
-            p.IsPrimary = false;
-        }
+        user.PrimaryPhotoId = photo.Id;
         await db.SaveChangesAsync(cancellationToken);
 
-        target.IsPrimary = true;
-        await db.SaveChangesAsync(cancellationToken);
-
-        return target.ToDto(storage);
+        return photo.ToDto(storage, isPrimary: true);
     }
 }

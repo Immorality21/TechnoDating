@@ -15,6 +15,9 @@ public class User : IdentityUser<Guid>
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset LastActiveAt { get; set; }
 
+    public Guid? PrimaryPhotoId { get; set; }
+    public Photo? PrimaryPhoto { get; set; }
+
     public bool IsProfileComplete =>
         !string.IsNullOrWhiteSpace(DisplayName)
         && DateOfBirth.HasValue

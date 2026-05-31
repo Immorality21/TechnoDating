@@ -17,8 +17,16 @@ public class DeletePhotoHandler(TechnoDatingDbContext db, IBlobStorage storage) 
             return false;
         }
 
-        var wasPrimary = photo.IsPrimary;
+        var user = await db.Users.FirstAsync(u => u.Id == request.UserId, cancellationToken);
+        var wasPrimary = user.PrimaryPhotoId == photo.Id;
         var storageKey = photo.StorageKey;
+
+        // Clear the FK explicitly before removing the photo so EF's change
+        // tracker stays in sync with the SetNull cascade the DB will apply.
+        if (wasPrimary)
+        {
+            user.PrimaryPhotoId = null;
+        }
 
         db.Photos.Remove(photo);
         await db.SaveChangesAsync(cancellationToken);
@@ -30,10 +38,11 @@ public class DeletePhotoHandler(TechnoDatingDbContext db, IBlobStorage storage) 
             var next = await db.Photos
                 .Where(p => p.UserId == request.UserId)
                 .OrderBy(p => p.Ordinal)
+                .Select(p => (Guid?)p.Id)
                 .FirstOrDefaultAsync(cancellationToken);
             if (next is not null)
             {
-                next.IsPrimary = true;
+                user.PrimaryPhotoId = next;
                 await db.SaveChangesAsync(cancellationToken);
             }
         }

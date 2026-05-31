@@ -113,10 +113,19 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
             b.Property(p => p.ContentType).IsRequired().HasMaxLength(64);
             b.Property(p => p.ModerationStatus).IsRequired().HasMaxLength(32);
             b.HasIndex(p => new { p.UserId, p.Ordinal }).IsUnique();
-            b.HasIndex(p => new { p.UserId, p.IsPrimary })
-                .IsUnique()
-                .HasFilter("\"IsPrimary\" = true");
             b.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Option C — primary photo is a nullable FK on User, not a flag on Photo.
+        // Single source of truth, atomic updates, no partial unique index.
+        // SetNull on delete: when the primary photo is removed, Postgres clears
+        // the column; the delete handler then promotes the next photo.
+        modelBuilder.Entity<User>(b =>
+        {
+            b.HasOne(u => u.PrimaryPhoto)
+                .WithMany()
+                .HasForeignKey(u => u.PrimaryPhotoId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

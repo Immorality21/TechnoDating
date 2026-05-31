@@ -12,12 +12,12 @@ public static class PhotoMappingExtensions
     public const string CardVariant = "card.webp";
     public const string FullVariant = "full.webp";
 
-    public static PhotoDto ToDto(this Photo photo, IBlobStorage storage)
+    public static PhotoDto ToDto(this Photo photo, IBlobStorage storage, bool isPrimary)
     {
         return new PhotoDto(
             photo.Id,
             photo.Ordinal,
-            photo.IsPrimary,
+            isPrimary,
             ThumbUrl: storage.GetSignedUrl($"{photo.StorageKey}/{ThumbVariant}"),
             CardUrl: storage.GetSignedUrl($"{photo.StorageKey}/{CardVariant}"),
             FullUrl: storage.GetSignedUrl($"{photo.StorageKey}/{FullVariant}"));
@@ -34,12 +34,18 @@ public static class PhotoMappingExtensions
         Guid userId,
         CancellationToken cancellationToken)
     {
+        var primaryPhotoId = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.PrimaryPhotoId)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var rows = await db.Photos
             .AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderBy(p => p.Ordinal)
             .ToListAsync(cancellationToken);
-        return rows.Select(p => p.ToDto(storage)).ToList();
+        return rows.Select(p => p.ToDto(storage, isPrimary: primaryPhotoId == p.Id)).ToList();
     }
 
     public static async Task<Dictionary<Guid, string>> LoadPrimaryPhotoCardUrlsAsync(
@@ -52,13 +58,17 @@ public static class PhotoMappingExtensions
         {
             return new Dictionary<Guid, string>();
         }
-        var primaries = await db.Photos
+        var primaries = await db.Users
             .AsNoTracking()
-            .Where(p => userIds.Contains(p.UserId) && p.IsPrimary)
-            .Select(p => new { p.UserId, p.StorageKey })
+            .Where(u => userIds.Contains(u.Id) && u.PrimaryPhotoId != null)
+            .Join(
+                db.Photos.AsNoTracking(),
+                u => u.PrimaryPhotoId,
+                p => p.Id,
+                (u, p) => new { UserId = u.Id, p.StorageKey })
             .ToListAsync(cancellationToken);
         return primaries.ToDictionary(
-            p => p.UserId,
-            p => storage.GetSignedUrl($"{p.StorageKey}/{CardVariant}"));
+            x => x.UserId,
+            x => storage.GetSignedUrl($"{x.StorageKey}/{CardVariant}"));
     }
 }

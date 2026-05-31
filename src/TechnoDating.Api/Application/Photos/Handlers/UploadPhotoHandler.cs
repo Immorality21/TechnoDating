@@ -19,6 +19,12 @@ public class UploadPhotoHandler(TechnoDatingDbContext db, IBlobStorage storage, 
 
     public async Task<PhotoDto?> Handle(UploadPhotoRequest request, CancellationToken cancellationToken)
     {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
+        if (user is null)
+        {
+            return null;
+        }
+
         var existingCount = await db.Photos.CountAsync(p => p.UserId == request.UserId, cancellationToken);
         if (existingCount >= MaxPhotosPerUser)
         {
@@ -54,14 +60,12 @@ public class UploadPhotoHandler(TechnoDatingDbContext db, IBlobStorage storage, 
             var nextOrdinal = existingCount == 0
                 ? 0
                 : await db.Photos.Where(p => p.UserId == request.UserId).MaxAsync(p => (int?)p.Ordinal, cancellationToken) + 1 ?? 0;
-            var becomesPrimary = existingCount == 0;
 
             var photo = new Photo
             {
                 Id = photoId,
-                UserId = request.UserId,
+                UserId = user.Id,
                 Ordinal = nextOrdinal,
-                IsPrimary = becomesPrimary,
                 Width = fullWidth,
                 Height = fullHeight,
                 StorageKey = storageKey,
@@ -71,9 +75,18 @@ public class UploadPhotoHandler(TechnoDatingDbContext db, IBlobStorage storage, 
             };
 
             db.Photos.Add(photo);
-            await db.SaveChangesAsync(cancellationToken);
 
-            return photo.ToDto(storage);
+            // First-photo promotion: become primary automatically if the user
+            // has no primary yet. Save photo first so the FK target exists.
+            var becomesPrimary = user.PrimaryPhotoId is null;
+            await db.SaveChangesAsync(cancellationToken);
+            if (becomesPrimary)
+            {
+                user.PrimaryPhotoId = photoId;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            return photo.ToDto(storage, isPrimary: becomesPrimary);
         }
     }
 
