@@ -7,4 +7,5 @@ public record MatchProfileDto(
     string City,
     IReadOnlyList<ArtistRefDto> TopArtists,
     IReadOnlyList<string> CommonFestivals,
-    double DistanceKm);
+    double DistanceKm,
+    string? PrimaryPhotoUrl);

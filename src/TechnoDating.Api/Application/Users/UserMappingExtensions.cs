@@ -7,8 +7,12 @@ namespace TechnoDating.Api.Application.Users;
 
 public static class UserMappingExtensions
 {
-    public static UserProfileDto ToProfileDto(this User user, IReadOnlyList<ArtistRefDto> topArtists)
+    public static UserProfileDto ToProfileDto(
+        this User user,
+        IReadOnlyList<ArtistRefDto> topArtists,
+        IReadOnlyList<PhotoDto> photos)
     {
+        var primary = photos.FirstOrDefault(p => p.IsPrimary);
         return new UserProfileDto(
             user.Id,
             user.PhoneNumber ?? string.Empty,
@@ -18,6 +22,8 @@ public static class UserMappingExtensions
             user.Bio,
             user.City,
             topArtists,
+            photos,
+            primary?.CardUrl,
             user.IsVerified,
             user.IsProfileComplete);
     }

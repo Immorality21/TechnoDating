@@ -1,0 +1,142 @@
+@inherits LocalizedComponentBase
+@inject IHttpClientFactory HttpClientFactory
+
+<div class="photo-gallery">
+    @if (Photos is not null && Photos.Count > 0)
+    {
+        <div class="row g-2 mb-3">
+            @foreach (var p in Photos.OrderBy(p => p.Ordinal))
+            {
+                <div class="col-4 col-md-3">
+                    <div class="photo-tile">
+                        <div class="photo-thumb-wrap">
+                            <img src="@p.CardUrl" class="photo-thumb" alt="" />
+                            @if (p.IsPrimary)
+                            {
+                                <span class="badge bg-primary photo-primary-badge">@L["Profile.Photos.Primary"]</span>
+                            }
+                        </div>
+                        <div class="photo-actions">
+                            @if (!p.IsPrimary)
+                            {
+                                <button type="button" class="btn btn-link btn-sm" disabled="@busy" @onclick="() => SetPrimary(p.Id)">
+                                    @L["Profile.Photos.SetPrimary"]
+                                </button>
+                            }
+                            <button type="button" class="btn btn-link btn-sm photo-action-delete" disabled="@busy" @onclick="() => Delete(p.Id)">
+                                @L["Profile.Photos.Delete"]
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="d-flex align-items-center gap-2">
+        <label class="btn btn-primary btn-sm @(busy ? "disabled" : "")" style="position:relative; cursor:pointer;">
+            @(busy ? L["Profile.Photos.Uploading"] : L["Profile.Photos.UploadButton"])
+            <InputFile OnChange="HandleUpload" accept="image/*" disabled="@busy"
+                       style="position:absolute; inset:0; opacity:0; cursor:pointer;" />
+        </label>
+        <span class="text-muted small">@L["Profile.Photos.Limit"]</span>
+    </div>
+
+    @if (errorMessage is not null)
+    {
+        <div class="alert alert-danger mt-2">@errorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<PhotoDto>? Photos { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private const long MaxBytes = 10 * 1024 * 1024;
+    private bool busy;
+    private string? errorMessage;
+
+    private async Task HandleUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null)
+        {
+            return;
+        }
+        if (file.Size > MaxBytes)
+        {
+            errorMessage = L["Profile.Photos.Error.TooLarge"];
+            return;
+        }
+
+        busy = true;
+        errorMessage = null;
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            await using var stream = file.OpenReadStream(MaxBytes);
+            using var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(string.IsNullOrEmpty(file.ContentType) ? "image/jpeg" : file.ContentType);
+            content.Add(fileContent, "file", file.Name);
+
+            var http = HttpClientFactory.CreateClient("api");
+            var response = await http.PostAsync("/api/users/me/photos", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = L["Profile.Photos.Error.Upload"];
+                return;
+            }
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task SetPrimary(Guid photoId)
+    {
+        busy = true;
+        errorMessage = null;
+        try
+        {
+            var http = HttpClientFactory.CreateClient("api");
+            var response = await http.PutAsync($"/api/users/me/photos/{photoId}/primary", null);
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = L["Common.Error.SaveFailed"];
+                return;
+            }
+            await OnChanged.InvokeAsync();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task Delete(Guid photoId)
+    {
+        busy = true;
+        errorMessage = null;
+        try
+        {
+            var http = HttpClientFactory.CreateClient("api");
+            var response = await http.DeleteAsync($"/api/users/me/photos/{photoId}");
+            if (!response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
+            {
+                errorMessage = L["Common.Error.SaveFailed"];
+                return;
+            }
+            await OnChanged.InvokeAsync();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

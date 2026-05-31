@@ -16,6 +16,7 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
     public DbSet<Artist> Artists => Set<Artist>();
     public DbSet<UserTopArtist> UserTopArtists => Set<UserTopArtist>();
     public DbSet<FestivalHeadlineArtist> FestivalHeadlineArtists => Set<FestivalHeadlineArtist>();
+    public DbSet<Photo> Photos => Set<Photo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -103,6 +104,19 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
             b.HasIndex(x => x.FestivalId);
             b.HasOne(x => x.Festival).WithMany().HasForeignKey(x => x.FestivalId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(x => x.Artist).WithMany().HasForeignKey(x => x.ArtistId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Photo>(b =>
+        {
+            b.HasKey(p => p.Id);
+            b.Property(p => p.StorageKey).IsRequired().HasMaxLength(512);
+            b.Property(p => p.ContentType).IsRequired().HasMaxLength(64);
+            b.Property(p => p.ModerationStatus).IsRequired().HasMaxLength(32);
+            b.HasIndex(p => new { p.UserId, p.Ordinal }).IsUnique();
+            b.HasIndex(p => new { p.UserId, p.IsPrimary })
+                .IsUnique()
+                .HasFilter("\"IsPrimary\" = true");
+            b.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -1,12 +1,14 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TechnoDating.Api.Application.Photos;
+using TechnoDating.Api.Application.Storage;
 using TechnoDating.Api.Application.Users.Requests;
 using TechnoDating.Api.Infrastructure;
 using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Users.Handlers;
 
-public class GetMeHandler(TechnoDatingDbContext db) : IRequestHandler<GetMeRequest, UserProfileDto?>
+public class GetMeHandler(TechnoDatingDbContext db, IBlobStorage storage) : IRequestHandler<GetMeRequest, UserProfileDto?>
 {
     public async Task<UserProfileDto?> Handle(GetMeRequest request, CancellationToken cancellationToken)
     {
@@ -20,6 +22,7 @@ public class GetMeHandler(TechnoDatingDbContext db) : IRequestHandler<GetMeReque
         }
 
         var topArtists = await db.LoadTopArtistsAsync(user.Id, cancellationToken);
-        return user.ToProfileDto(topArtists);
+        var photos = await db.LoadPhotosAsync(storage, user.Id, cancellationToken);
+        return user.ToProfileDto(topArtists, photos);
     }
 }

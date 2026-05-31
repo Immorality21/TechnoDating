@@ -105,6 +105,15 @@
   <data name="Profile.Bio" xml:space="preserve"><value>Bio</value></data>
   <data name="Profile.TopArtists" xml:space="preserve"><value>Favoriete artiesten</value></data>
   <data name="Profile.Language" xml:space="preserve"><value>Taal</value></data>
+  <data name="Profile.Photos.Heading" xml:space="preserve"><value>Foto's</value></data>
+  <data name="Profile.Photos.UploadButton" xml:space="preserve"><value>Foto uploaden</value></data>
+  <data name="Profile.Photos.Uploading" xml:space="preserve"><value>Uploaden…</value></data>
+  <data name="Profile.Photos.SetPrimary" xml:space="preserve"><value>Maak hoofdfoto</value></data>
+  <data name="Profile.Photos.Delete" xml:space="preserve"><value>Verwijderen</value></data>
+  <data name="Profile.Photos.Primary" xml:space="preserve"><value>Hoofd</value></data>
+  <data name="Profile.Photos.Limit" xml:space="preserve"><value>Tot 6 foto's · JPG/PNG/WebP/HEIC tot 10 MB</value></data>
+  <data name="Profile.Photos.Error.Upload" xml:space="preserve"><value>Foto uploaden mislukt. Zorg dat het een afbeelding onder 10 MB is.</value></data>
+  <data name="Profile.Photos.Error.TooLarge" xml:space="preserve"><value>Bestand te groot. Max 10 MB.</value></data>
 
   <data name="Home.Heading" xml:space="preserve"><value>TechnoDating</value></data>
   <data name="Home.Tagline" xml:space="preserve"><value>Match op de muziek. Ontmoet op het volgende feest.</value></data>

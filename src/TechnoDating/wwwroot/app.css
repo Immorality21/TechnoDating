@@ -1,35 +1,42 @@
 /* =============================================================
-   TechnoDating — temporary "lava + forest" theme
-   Inspiration: lava-lamp warmth + Into the Woods (ADE) woodland.
-   Earthy dark base, amber ember accents, mossy secondary.
+   TechnoDating — temporary "neon club" theme
+   Reference: cyan + magenta neon club, glassmorphic surfaces,
+   pill button with cyan→magenta gradient + outer glow.
    Placeholder styling — will be replaced before launch.
    Keep changes scoped to this file.
    ============================================================= */
 
 :root {
-    /* surfaces — warm dark, never pure black */
-    --tn-bg:           #1a1612;       /* dark walnut */
-    --tn-bg-elevated:  #221d18;
-    --tn-surface:      #2a241e;       /* cards */
-    --tn-surface-hi:   #34291f;       /* hover / active */
-    --tn-border:       #3a2f25;
-    --tn-border-hi:    #5a4836;
+    /* surfaces — deep indigo near-black, never pure */
+    --tn-bg:           #0a0a1f;       /* deepest indigo */
+    --tn-bg-elevated:  #14122e;
+    --tn-surface:      #1c1838;       /* cards */
+    --tn-surface-hi:   #251e44;       /* hover / active */
+    --tn-border:       #2a234c;
+    --tn-border-hi:    #3d3370;
+    --tn-glass:        rgba(28, 24, 56, 0.55);
+    --tn-glass-hi:     rgba(37, 30, 68, 0.7);
 
-    /* text — warm cream, easy on the eye */
-    --tn-text:         #f3ead9;
-    --tn-text-dim:     #b8a892;
-    --tn-text-faint:   #8a7a64;
+    /* text — high contrast white-cream */
+    --tn-text:         #f4f4f6;
+    --tn-text-dim:     #b4b0c6;
+    --tn-text-faint:   #7a7494;
 
-    /* accents — embers in a forest at dusk */
-    --tn-ember:        #f6822b;       /* primary action — warm orange */
-    --tn-ember-hi:     #ff9b4d;
-    --tn-ember-lo:     #c95f12;
-    --tn-amber:        #e0a23a;       /* secondary — sunset gold */
-    --tn-moss:         #8aa454;       /* deep forest green */
-    --tn-rust:         #b54b2e;       /* deeper, for ticketed/verified */
+    /* accents — neon cyan + magenta as the dual brand */
+    --tn-cyan:         #22d3ee;
+    --tn-cyan-hi:      #67e8f9;
+    --tn-magenta:      #e879f9;
+    --tn-magenta-hi:   #f0abfc;
+    --tn-violet:       #8b5cf6;       /* tween accent */
 
-    /* lava-lamp gradient (used sparingly on h1 + brand) */
-    --tn-lava: linear-gradient(135deg, #ff9b4d 0%, #f6822b 40%, #c4422a 90%);
+    /* gradients — neon, horizontal, two-stop */
+    --tn-gradient:     linear-gradient(90deg, #22d3ee 0%, #e879f9 100%);
+    --tn-gradient-135: linear-gradient(135deg, #22d3ee 0%, #8b5cf6 50%, #e879f9 100%);
+
+    /* glows — used on buttons, hover, focus */
+    --tn-glow-cyan:    0 0 24px rgba(34, 211, 238, 0.45);
+    --tn-glow-magenta: 0 0 24px rgba(232, 121, 249, 0.45);
+    --tn-glow-button:  0 4px 16px rgba(232, 121, 249, 0.35), 0 0 40px rgba(34, 211, 238, 0.2);
 }
 
 /* ---------- Base ---------- */
@@ -42,7 +49,7 @@ html, body {
     letter-spacing: -0.005em;
 }
 
-/* lava-lamp atmosphere — soft ember + moss blobs, fixed behind everything */
+/* Neon-club atmosphere — soft cyan + magenta blobs fixed behind everything */
 body::before {
     content: "";
     position: fixed;
@@ -50,23 +57,23 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background:
-        radial-gradient(ellipse 60% 40% at 15% 20%, rgba(246, 130, 43, 0.10) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 35% at 85% 80%, rgba(138, 164, 84, 0.07) 0%, transparent 65%),
-        radial-gradient(ellipse 70% 50% at 50% 100%, rgba(197, 95, 18, 0.06) 0%, transparent 70%);
+        radial-gradient(ellipse 70% 50% at 15% 10%, rgba(34, 211, 238, 0.14) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 90%, rgba(232, 121, 249, 0.14) 0%, transparent 60%),
+        radial-gradient(ellipse 90% 60% at 50% 50%, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
 }
 
 h1, h2, h3, h4, h5, h6,
 .navbar-brand {
-    font-family: 'Syne', 'Inter', system-ui, sans-serif;
+    font-family: 'Sora', 'Inter', system-ui, sans-serif;
     font-weight: 700;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
     color: var(--tn-text);
 }
 
 h1 {
-    font-size: 2.1rem;
-    margin-bottom: 0.85rem;
-    background: var(--tn-lava);
+    font-size: 2.15rem;
+    margin-bottom: 0.9rem;
+    background: var(--tn-gradient);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -86,17 +93,18 @@ p, label, span, td, th {
 }
 
 a, .btn-link {
-    color: var(--tn-amber);
+    color: var(--tn-cyan-hi);
     text-decoration: none;
-    transition: color 0.15s ease;
+    transition: color 0.15s ease, text-shadow 0.15s ease;
 }
 a:hover, .btn-link:hover {
-    color: var(--tn-ember-hi);
+    color: var(--tn-magenta-hi);
+    text-shadow: 0 0 12px rgba(232, 121, 249, 0.45);
 }
 
 code {
     background: var(--tn-surface);
-    color: var(--tn-amber);
+    color: var(--tn-cyan-hi);
     padding: 0.1rem 0.35rem;
     border-radius: 4px;
     font-size: 0.875em;
@@ -146,8 +154,8 @@ main .top-row > a:hover {
 /* ---------- Sidebar nav ---------- */
 
 .navbar-brand {
-    font-size: 1.45rem !important;
-    background: var(--tn-lava);
+    font-size: 1.55rem !important;
+    background: var(--tn-gradient);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -173,11 +181,11 @@ main .top-row > a:hover {
 
 .nav-link {
     color: var(--tn-text-dim) !important;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 0.6rem 0.85rem !important;
     font-weight: 500;
     font-size: 0.95rem;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.2s ease;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -191,7 +199,20 @@ main .top-row > a:hover {
 .nav-link.active {
     background: var(--tn-surface-hi);
     color: var(--tn-text) !important;
-    box-shadow: inset 3px 0 0 var(--tn-ember);
+    box-shadow: inset 3px 0 0 transparent;
+    border-image: var(--tn-gradient) 1;
+    position: relative;
+}
+.nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--tn-gradient);
+    box-shadow: 0 0 12px rgba(232, 121, 249, 0.45);
 }
 
 .nav-link.btn-link {
@@ -200,29 +221,51 @@ main .top-row > a:hover {
     border: 0;
 }
 
-/* ---------- Cards ---------- */
+/* ---------- Cards — glassmorphism ---------- */
 
 .card {
-    background-color: var(--tn-surface);
-    background-image: linear-gradient(180deg, rgba(246, 130, 43, 0.02) 0%, transparent 100%);
-    border: 1px solid var(--tn-border);
-    border-radius: 14px;
+    background-color: var(--tn-glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
     overflow: hidden;
-    transition: border-color 0.2s ease, transform 0.2s ease;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+.card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(232, 121, 249, 0.15) 60%, transparent 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
 }
 
 .card:hover {
-    border-color: var(--tn-border-hi);
     transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 24px rgba(232, 121, 249, 0.08);
+}
+.card:hover::before {
+    opacity: 1;
 }
 
 .card-body {
     padding: 1.25rem;
+    position: relative;
+    z-index: 1;
 }
 
 .card-title {
-    font-family: 'Syne', 'Inter', sans-serif;
-    font-weight: 700;
+    font-family: 'Sora', 'Inter', sans-serif;
+    font-weight: 600;
     color: var(--tn-text);
 }
 
@@ -278,78 +321,99 @@ main .top-row > a:hover {
 /* ---------- Buttons ---------- */
 
 .btn {
-    border-radius: 10px;
+    border-radius: 999px;       /* pill */
     font-weight: 600;
-    padding: 0.55rem 1.1rem;
-    transition: transform 0.1s ease, filter 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    padding: 0.65rem 1.4rem;
+    transition: transform 0.1s ease, filter 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
     border: 1px solid transparent;
+    font-family: 'Sora', 'Inter', sans-serif;
+    letter-spacing: 0.005em;
 }
 
 .btn:active {
     transform: translateY(1px);
 }
 
+/* primary — the headline pill: cyan→magenta gradient with neon outer glow */
 .btn-primary {
-    background-color: var(--tn-ember);
-    border-color: var(--tn-ember);
-    color: #1a1108;
+    background-image: var(--tn-gradient);
+    background-color: transparent;
+    border-color: transparent;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--tn-glow-button), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .btn-primary:hover:not(:disabled),
 .btn-primary:focus:not(:disabled) {
-    background-color: var(--tn-ember-hi);
-    border-color: var(--tn-ember-hi);
-    color: #1a1108;
+    background-image: var(--tn-gradient);
+    background-color: transparent;
+    border-color: transparent;
+    color: #ffffff;
+    filter: brightness(1.08);
+    box-shadow:
+        0 0 32px rgba(232, 121, 249, 0.55),
+        0 0 60px rgba(34, 211, 238, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn-primary:disabled {
+    background-image: none;
     background-color: var(--tn-surface-hi);
     border-color: var(--tn-border);
     color: var(--tn-text-faint);
     opacity: 1;
+    box-shadow: none;
+    text-shadow: none;
 }
 
 .btn-outline-danger {
     border-color: var(--tn-border-hi);
     color: var(--tn-text-dim);
     background: transparent;
+    border-radius: 999px;
 }
 .btn-outline-danger:hover {
-    background: rgba(181, 75, 46, 0.12);
-    border-color: var(--tn-rust);
-    color: var(--tn-ember-hi);
+    background: rgba(232, 121, 249, 0.10);
+    border-color: var(--tn-magenta);
+    color: var(--tn-magenta-hi);
+    box-shadow: 0 0 16px rgba(232, 121, 249, 0.25);
 }
 
 .btn-link {
     padding: 0.55rem 0.75rem;
     font-weight: 500;
+    border-radius: 999px;
 }
 
-/* Focus ring — warm amber */
+/* Focus ring — neon dual-tone */
 .btn:focus, .btn:active:focus,
 .btn-link.nav-link:focus,
 .form-control:focus, .form-select:focus, .form-check-input:focus {
-    box-shadow: 0 0 0 0.15rem rgba(246, 130, 43, 0.35) !important;
-    border-color: var(--tn-ember) !important;
+    box-shadow:
+        0 0 0 2px rgba(34, 211, 238, 0.35),
+        0 0 0 4px rgba(232, 121, 249, 0.25) !important;
+    border-color: var(--tn-magenta) !important;
     outline: none;
 }
 
 /* ---------- Forms ---------- */
-/* NB: longhand background-* on purpose — using the `background:` shorthand
-   here wipes out Bootstrap's no-repeat + position rules, which tiles the
-   chevron icon across the entire <select>. */
+/* NB: longhand background-* on purpose — `background:` shorthand wipes
+   Bootstrap's no-repeat + position rules and tiles the chevron icon. */
 
 .form-control,
 .form-select {
-    background-color: var(--tn-surface);
+    background-color: var(--tn-glass);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: var(--tn-text);
     border: 1px solid var(--tn-border);
-    border-radius: 10px;
-    padding: 0.6rem 0.85rem;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
+    border-radius: 12px;
+    padding: 0.65rem 0.95rem;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-control:focus,
 .form-select:focus {
-    background-color: var(--tn-surface-hi);
+    background-color: var(--tn-glass-hi);
     color: var(--tn-text);
 }
 
@@ -358,23 +422,23 @@ main .top-row > a:hover {
 }
 
 .form-select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23b8a892' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23b4b0c6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
-    background-position: right 0.75rem center;
+    background-position: right 0.85rem center;
     background-size: 16px 12px;
-    padding-right: 2.25rem;
+    padding-right: 2.5rem;
 }
 
 .form-select-sm {
-    padding: 0.35rem 1.85rem 0.35rem 0.6rem;
-    background-position: right 0.55rem center;
+    padding: 0.4rem 1.85rem 0.4rem 0.7rem;
+    background-position: right 0.6rem center;
     background-size: 14px 10px;
-    border-radius: 8px;
+    border-radius: 10px;
 }
 
 .form-label {
     color: var(--tn-text-dim);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     margin-bottom: 0.4rem;
     text-transform: uppercase;
@@ -384,64 +448,70 @@ main .top-row > a:hover {
 /* ---------- Badges ---------- */
 
 .badge {
-    font-family: 'Syne', 'Inter', sans-serif;
-    font-weight: 700;
+    font-family: 'Sora', 'Inter', sans-serif;
+    font-weight: 600;
     letter-spacing: 0.02em;
     padding: 0.4em 0.7em;
-    border-radius: 6px;
+    border-radius: 999px;       /* pill badges */
 }
 
 .badge.bg-success {
-    background-color: var(--tn-moss) !important;
-    color: #0f1605;
+    background-color: var(--tn-cyan) !important;
+    color: #06121a;
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.35);
 }
 
 .badge.bg-primary {
-    background-color: var(--tn-ember) !important;
-    color: #1a1108;
+    background-image: var(--tn-gradient) !important;
+    background-color: transparent !important;
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(232, 121, 249, 0.3);
 }
 
 .badge.bg-warning {
-    background-color: var(--tn-amber) !important;
-    color: #1f1500;
+    background-color: var(--tn-magenta) !important;
+    color: #1a0825;
+    box-shadow: 0 0 12px rgba(232, 121, 249, 0.35);
 }
 
 .badge.bg-danger {
-    background-color: var(--tn-rust) !important;
-    color: #fff;
+    background-color: var(--tn-magenta) !important;
+    color: #ffffff;
 }
 
 /* ---------- Alerts ---------- */
 
 .alert {
-    border-radius: 12px;
+    border-radius: 14px;
     border-width: 1px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .alert-danger {
-    background: rgba(181, 75, 46, 0.10);
-    border-color: rgba(181, 75, 46, 0.35);
-    color: #f3c0a8;
+    background: rgba(232, 121, 249, 0.10);
+    border-color: rgba(232, 121, 249, 0.35);
+    color: #f5c8ff;
 }
 
 .alert-info {
-    background: rgba(138, 164, 84, 0.10);
-    border-color: rgba(138, 164, 84, 0.35);
-    color: #d4e3a8;
+    background: rgba(34, 211, 238, 0.10);
+    border-color: rgba(34, 211, 238, 0.35);
+    color: #a5f3fc;
 }
 
 /* ---------- Validation ---------- */
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid var(--tn-moss);
+    outline: 1px solid var(--tn-cyan);
 }
 
 .invalid {
-    outline: 1px solid var(--tn-rust);
+    outline: 1px solid var(--tn-magenta);
 }
 
 .validation-message {
-    color: var(--tn-rust);
+    color: var(--tn-magenta-hi);
 }
 
 /* ---------- Blazor error UI ---------- */
@@ -450,9 +520,9 @@ main .top-row > a:hover {
     color-scheme: dark only;
     background: var(--tn-surface-hi);
     color: var(--tn-text);
-    border-top: 1px solid var(--tn-ember);
+    border-top: 1px solid var(--tn-magenta);
     bottom: 0;
-    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 -1px 16px rgba(232, 121, 249, 0.35);
     box-sizing: border-box;
     display: none;
     left: 0;
@@ -470,10 +540,10 @@ main .top-row > a:hover {
 }
 
 .blazor-error-boundary {
-    background: var(--tn-ember-lo);
-    color: #fff;
+    background: linear-gradient(135deg, #6b21a8, #a21caf);
+    color: #ffffff;
     padding: 1rem;
-    border-radius: 8px;
+    border-radius: 10px;
 }
 
 .blazor-error-boundary::after {
@@ -527,29 +597,102 @@ em {
 
 /* ---------- Avatar ---------- */
 
+.avatar-circle,
+.avatar-photo {
+    display: inline-block;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.avatar-photo {
+    object-fit: cover;
+}
+
 .avatar-circle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    color: #fff;
-    font-family: 'Syne', 'Inter', sans-serif;
+    color: #ffffff;
+    font-family: 'Sora', 'Inter', sans-serif;
     font-weight: 700;
     text-transform: uppercase;
-    flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.avatar-circle::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 50%);
+    pointer-events: none;
 }
 
 .avatar-initial {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     line-height: 1;
+    position: relative;
+    z-index: 1;
+}
+
+/* ---------- Photo gallery ---------- */
+
+.photo-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.photo-thumb-wrap {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--tn-border);
+    background: var(--tn-surface);
+}
+
+.photo-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.photo-primary-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+.photo-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.photo-actions .btn-link {
+    padding: 0.2rem 0.45rem;
+    font-size: 0.75rem;
+    border-radius: 999px;
+}
+
+.photo-action-delete {
+    color: var(--tn-magenta-hi);
+}
+.photo-action-delete:hover {
+    color: var(--tn-magenta);
+    text-shadow: 0 0 8px rgba(232, 121, 249, 0.45);
 }
 
 /* ---------- Selection + scrollbar ---------- */
 
 ::selection {
-    background: rgba(246, 130, 43, 0.35);
-    color: var(--tn-text);
+    background: rgba(232, 121, 249, 0.45);
+    color: #ffffff;
 }
 
 ::-webkit-scrollbar {
@@ -564,5 +707,5 @@ em {
     border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--tn-text-faint);
+    background: var(--tn-violet);
 }

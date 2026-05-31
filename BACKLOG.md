@@ -43,12 +43,11 @@
 
 - [ ] **iDIN integration** for verified Dutch identity (real name + age + uniqueness). Foundation for trust badges and women's-safety story.
 - [ ] **Live selfie on signup** + before every first date (Breeze-style anti-catfishing).
-- [ ] **Photo moderation** (AWS Rekognition / Azure Content Safety / Hive).
+- [ ] **Photo moderation** (AWS Rekognition / Azure Content Safety / Hive). Wire into `Photo.ModerationStatus` — uploads land as `pending`, async worker scans + flips to `approved` / `rejected`. Block render of non-approved photos in the public DTOs.
 - [ ] **Reporting + blocking + mod queue.** Non-negotiable before any real launch.
 - [ ] **Push notifications** (FCM + APNs, or OneSignal as a unifier).
 - [ ] **Background work runner.** Start with `IHostedService` + `System.Threading.Channels`; promote to Hangfire when we need persistence/retries/dashboard.
 - [ ] **Spotify OAuth + listening-history sync.** Token refresh + recently-played + top artists/tracks.
-- [ ] **Photos on profile.** Profile photo + gallery. Needs verification gating (iDIN + live selfie) before going live.
 
 ---
 

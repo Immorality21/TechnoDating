@@ -1,6 +1,7 @@
 @code {
     [Parameter, EditorRequired] public string DisplayName { get; set; } = string.Empty;
     [Parameter] public Guid? UserId { get; set; }
+    [Parameter] public string? PhotoUrl { get; set; }
     [Parameter] public string Size { get; set; } = "48px";
 
     private string Initial =>
@@ -27,6 +28,13 @@
     }
 }
 
-<span class="avatar-circle" style="width:@Size; height:@Size; background:@Color;">
-    <span class="avatar-initial">@Initial</span>
-</span>
+@if (!string.IsNullOrEmpty(PhotoUrl))
+{
+    <img src="@PhotoUrl" class="avatar-photo" style="width:@Size; height:@Size;" alt="@DisplayName" />
+}
+else
+{
+    <span class="avatar-circle" style="width:@Size; height:@Size; background:@Color;">
+        <span class="avatar-initial">@Initial</span>
+    </span>
+}

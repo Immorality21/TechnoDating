@@ -1,12 +1,14 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TechnoDating.Api.Application.Matches.Requests;
+using TechnoDating.Api.Application.Photos;
+using TechnoDating.Api.Application.Storage;
 using TechnoDating.Api.Infrastructure;
 using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Matches.Handlers;
 
-public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMatchesRequest, IReadOnlyList<MatchProfileDto>>
+public class GetMatchesHandler(TechnoDatingDbContext db, IBlobStorage storage) : IRequestHandler<GetMatchesRequest, IReadOnlyList<MatchProfileDto>>
 {
     public async Task<IReadOnlyList<MatchProfileDto>> Handle(GetMatchesRequest request, CancellationToken cancellationToken)
     {
@@ -86,6 +88,8 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
                 .ToDictionaryAsync(x => x.UserId, x => x.FestivalIds, cancellationToken);
         }
 
+        var primaryPhotoUrls = await db.LoadPrimaryPhotoCardUrlsAsync(storage, userIds, cancellationToken);
+
         var empty = (IReadOnlyList<ArtistRefDto>)Array.Empty<ArtistRefDto>();
 
         var result = users
@@ -98,6 +102,7 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
                     .Cast<string>()
                     .ToList();
                 var artists = topArtistsByUser.TryGetValue(u.Id, out var a) ? a : empty;
+                var photoUrl = primaryPhotoUrls.TryGetValue(u.Id, out var url) ? url : null;
 
                 return new
                 {
@@ -108,7 +113,8 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
                         u.City!,
                         artists,
                         CommonFestivals: sharedNames,
-                        DistanceKm: Math.Round(u.DistanceMeters / 1000.0, 1)),
+                        DistanceKm: Math.Round(u.DistanceMeters / 1000.0, 1),
+                        PrimaryPhotoUrl: photoUrl),
                     SharedCount = sharedNames.Count,
                     Distance = u.DistanceMeters,
                 };

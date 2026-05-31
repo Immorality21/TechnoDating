@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using TechnoDating.Api.Application.Photos;
+using TechnoDating.Api.Application.Storage;
 using TechnoDating.Api.Application.Users;
 using TechnoDating.Api.Infrastructure;
 using TechnoDating.Api.Infrastructure.Entities;
@@ -16,6 +18,7 @@ namespace TechnoDating.Api.Application.Auth;
 public class TokenService(
     TechnoDatingDbContext db,
     UserManager<User> userManager,
+    IBlobStorage storage,
     IOptions<JwtOptions> jwtOptions,
     ILogger<TokenService> logger) : ITokenService
 {
@@ -44,11 +47,12 @@ public class TokenService(
         await db.SaveChangesAsync(cancellationToken);
 
         var topArtists = await db.LoadTopArtistsAsync(user.Id, cancellationToken);
+        var photos = await db.LoadPhotosAsync(storage, user.Id, cancellationToken);
         return new AuthResponseDto(
             accessToken,
             refreshPlaintext,
             accessExpires,
-            user.ToProfileDto(topArtists));
+            user.ToProfileDto(topArtists, photos));
     }
 
     public async Task<AuthResponseDto?> RefreshAsync(string refreshTokenPlaintext, CancellationToken cancellationToken)

@@ -52,6 +52,11 @@ else
         </div>
 
         <div class="mb-3">
+            <label class="form-label">@L["Profile.Photos.Heading"]</label>
+            <PhotoGallery Photos="profile.Photos" OnChanged="ReloadPhotosAsync" />
+        </div>
+
+        <div class="mb-3">
             <label class="form-label">@L["Profile.TopArtists"]</label>
             <ArtistPicker SelectedIds="selectedArtistIds" OnChanged="StateHasChanged" Disabled="busy" />
         </div>
@@ -166,6 +171,24 @@ else
         finally
         {
             busy = false;
+        }
+    }
+
+    private async Task ReloadPhotosAsync()
+    {
+        try
+        {
+            var http = HttpClientFactory.CreateClient("api");
+            var refreshed = await http.GetFromJsonAsync<UserProfileDto>("/api/users/me");
+            if (refreshed is not null)
+            {
+                profile = refreshed;
+                await Auth.SetCurrentUserAsync(refreshed);
+            }
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
         }
     }
 

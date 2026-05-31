@@ -9,5 +9,7 @@ public record UserProfileDto(
     string? Bio,
     string? City,
     IReadOnlyList<ArtistRefDto> TopArtists,
+    IReadOnlyList<PhotoDto> Photos,
+    string? PrimaryPhotoUrl,
     bool IsVerified,
     bool IsProfileComplete);

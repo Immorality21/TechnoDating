@@ -1,10 +1,13 @@
 using System.Security.Claims;
 using System.Text;
+using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using TechnoDating.Api.Application.Auth;
+using TechnoDating.Api.Application.Storage;
 using TechnoDating.Api.Infrastructure;
 using TechnoDating.Api.Infrastructure.Entities;
 using TechnoDating.Api.Infrastructure.Seeding;
@@ -112,7 +115,27 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("Storage"));
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+{
+    var opts = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(opts.Endpoint) || string.IsNullOrWhiteSpace(opts.Bucket))
+    {
+        throw new InvalidOperationException("Missing 'Storage' configuration. Set Endpoint + Bucket + keys (appsettings.Development.json for dev; env / Key Vault for prod).");
+    }
+    var config = new AmazonS3Config
+    {
+        ServiceURL = opts.Endpoint,
+        ForcePathStyle = opts.ForcePathStyle,
+        AuthenticationRegion = opts.Region,
+        UseHttp = opts.Endpoint.StartsWith("http://", StringComparison.OrdinalIgnoreCase),
+    };
+    return new AmazonS3Client(opts.AccessKey, opts.SecretKey, config);
+});
+builder.Services.AddScoped<IBlobStorage, S3BlobStorage>();
+
 builder.Services.AddHostedService<DatabaseInitializer>();
+builder.Services.AddHostedService<BlobStorageInitializer>();
 
 builder.Services.AddControllers();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));

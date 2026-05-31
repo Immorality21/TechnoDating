@@ -17,5 +17,25 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    image: minio/minio:latest
+    container_name: technodating-blobs
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: technodating
+      MINIO_ROOT_PASSWORD: dev-only-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - technodating-blobs-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   technodating-db-data:
+  technodating-blobs-data:

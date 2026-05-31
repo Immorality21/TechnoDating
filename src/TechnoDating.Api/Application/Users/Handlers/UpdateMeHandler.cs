@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
+using TechnoDating.Api.Application.Photos;
+using TechnoDating.Api.Application.Storage;
 using TechnoDating.Api.Application.Users.Requests;
 using TechnoDating.Api.Infrastructure;
 using TechnoDating.Api.Infrastructure.Entities;
@@ -8,7 +10,7 @@ using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Users.Handlers;
 
-public class UpdateMeHandler(TechnoDatingDbContext db) : IRequestHandler<UpdateMeRequest, UserProfileDto?>
+public class UpdateMeHandler(TechnoDatingDbContext db, IBlobStorage storage) : IRequestHandler<UpdateMeRequest, UserProfileDto?>
 {
     public async Task<UserProfileDto?> Handle(UpdateMeRequest request, CancellationToken cancellationToken)
     {
@@ -58,6 +60,7 @@ public class UpdateMeHandler(TechnoDatingDbContext db) : IRequestHandler<UpdateM
         await db.SaveChangesAsync(cancellationToken);
 
         var topArtists = await db.LoadTopArtistsAsync(user.Id, cancellationToken);
-        return user.ToProfileDto(topArtists);
+        var photos = await db.LoadPhotosAsync(storage, user.Id, cancellationToken);
+        return user.ToProfileDto(topArtists, photos);
     }
 }

@@ -105,6 +105,15 @@
   <data name="Profile.Bio" xml:space="preserve"><value>Bio</value></data>
   <data name="Profile.TopArtists" xml:space="preserve"><value>Top artists</value></data>
   <data name="Profile.Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Profile.Photos.Heading" xml:space="preserve"><value>Photos</value></data>
+  <data name="Profile.Photos.UploadButton" xml:space="preserve"><value>Upload photo</value></data>
+  <data name="Profile.Photos.Uploading" xml:space="preserve"><value>Uploading…</value></data>
+  <data name="Profile.Photos.SetPrimary" xml:space="preserve"><value>Set as primary</value></data>
+  <data name="Profile.Photos.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Profile.Photos.Primary" xml:space="preserve"><value>Primary</value></data>
+  <data name="Profile.Photos.Limit" xml:space="preserve"><value>Up to 6 photos · JPG/PNG/WebP/HEIC up to 10 MB</value></data>
+  <data name="Profile.Photos.Error.Upload" xml:space="preserve"><value>Couldn't upload photo. Make sure it's an image under 10 MB.</value></data>
+  <data name="Profile.Photos.Error.TooLarge" xml:space="preserve"><value>File too large. Max 10 MB.</value></data>
 
   <data name="Home.Heading" xml:space="preserve"><value>TechnoDating</value></data>
   <data name="Home.Tagline" xml:space="preserve"><value>Match on the music. Meet at the next show.</value></data>

@@ -1,12 +1,14 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TechnoDating.Api.Application.Festivals.Requests;
+using TechnoDating.Api.Application.Photos;
+using TechnoDating.Api.Application.Storage;
 using TechnoDating.Api.Infrastructure;
 using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Festivals.Handlers;
 
-public class GetFestivalAttendeesHandler(TechnoDatingDbContext db) : IRequestHandler<GetFestivalAttendeesRequest, IReadOnlyList<MatchProfileDto>>
+public class GetFestivalAttendeesHandler(TechnoDatingDbContext db, IBlobStorage storage) : IRequestHandler<GetFestivalAttendeesRequest, IReadOnlyList<MatchProfileDto>>
 {
     public async Task<IReadOnlyList<MatchProfileDto>> Handle(GetFestivalAttendeesRequest request, CancellationToken cancellationToken)
     {
@@ -57,6 +59,7 @@ public class GetFestivalAttendeesHandler(TechnoDatingDbContext db) : IRequestHan
             .GroupBy(x => x.UserId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<ArtistRefDto>)g.Select(x => x.Artist).ToList());
 
+        var primaryPhotoUrls = await db.LoadPrimaryPhotoCardUrlsAsync(storage, attendeeIds, cancellationToken);
         var empty = (IReadOnlyList<ArtistRefDto>)Array.Empty<ArtistRefDto>();
 
         return rows.Select(u => new MatchProfileDto(
@@ -66,7 +69,8 @@ public class GetFestivalAttendeesHandler(TechnoDatingDbContext db) : IRequestHan
             u.City!,
             topArtistsByUser.TryGetValue(u.Id, out var artists) ? artists : empty,
             CommonFestivals: [],
-            DistanceKm: u.DistanceMeters.HasValue ? Math.Round(u.DistanceMeters.Value / 1000.0, 1) : 0))
+            DistanceKm: u.DistanceMeters.HasValue ? Math.Round(u.DistanceMeters.Value / 1000.0, 1) : 0,
+            PrimaryPhotoUrl: primaryPhotoUrls.TryGetValue(u.Id, out var url) ? url : null))
             .ToList();
     }
 
