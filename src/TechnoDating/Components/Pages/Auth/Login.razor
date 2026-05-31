@@ -1,15 +1,16 @@
 @page "/login"
 @layout MainLayout
+@inherits LocalizedComponentBase
 @inject IAuthStateService Auth
 @inject NavigationManager Nav
 
-<h1>Sign in</h1>
+<h1>@L["Auth.Login.Heading"]</h1>
 
-<p>Enter your phone number. We'll send you a one-time code.</p>
+<p>@L["Auth.Login.Intro"]</p>
 
 <EditForm Model="this" OnValidSubmit="Submit">
     <div class="mb-3">
-        <label for="phone" class="form-label">Phone number</label>
+        <label for="phone" class="form-label">@L["Auth.Login.PhoneLabel"]</label>
         <input id="phone" type="tel" class="form-control" @bind="phoneNumber" placeholder="+31600000000" autocomplete="tel" disabled="@busy" />
     </div>
 
@@ -19,7 +20,7 @@
     }
 
     <button type="submit" class="btn btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(phoneNumber))">
-        @(busy ? "Sending…" : "Send code")
+        @(busy ? L["Common.Sending"] : L["Auth.Login.SubmitButton"])
     </button>
 </EditForm>
 
@@ -38,7 +39,7 @@
             var ok = await Auth.RequestOtpAsync(trimmed);
             if (!ok)
             {
-                errorMessage = "Couldn't send code. Check the number, or wait a minute before retrying.";
+                errorMessage = L["Auth.Login.Error.SendFailed"];
                 return;
             }
             Nav.NavigateTo($"/verify-otp?phone={Uri.EscapeDataString(trimmed)}");

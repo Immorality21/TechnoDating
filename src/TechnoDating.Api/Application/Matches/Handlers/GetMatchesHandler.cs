@@ -52,15 +52,30 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
                 u.DisplayName,
                 u.DateOfBirth,
                 u.City,
-                u.TopArtists,
                 DistanceMeters = u.Location!.Distance(center),
             })
             .ToListAsync(cancellationToken);
 
-        var theirOverlappingFestivals = new Dictionary<Guid, List<Guid>>();
-        if (users.Count > 0 && myFestivalSet.Count > 0)
+        if (users.Count == 0)
         {
-            var userIds = users.Select(u => u.Id).ToList();
+            return [];
+        }
+
+        var userIds = users.Select(u => u.Id).ToList();
+
+        var topArtistRows = await db.UserTopArtists
+            .AsNoTracking()
+            .Where(x => userIds.Contains(x.UserId))
+            .OrderBy(x => x.Rank)
+            .Join(db.Artists, x => x.ArtistId, a => a.Id, (x, a) => new { x.UserId, Artist = new ArtistRefDto(a.Id, a.Name) })
+            .ToListAsync(cancellationToken);
+        var topArtistsByUser = topArtistRows
+            .GroupBy(x => x.UserId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ArtistRefDto>)g.Select(x => x.Artist).ToList());
+
+        var theirOverlappingFestivals = new Dictionary<Guid, List<Guid>>();
+        if (myFestivalSet.Count > 0)
+        {
             theirOverlappingFestivals = await db.Attendances
                 .AsNoTracking()
                 .Where(a => userIds.Contains(a.UserId)
@@ -71,6 +86,8 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
                 .ToDictionaryAsync(x => x.UserId, x => x.FestivalIds, cancellationToken);
         }
 
+        var empty = (IReadOnlyList<ArtistRefDto>)Array.Empty<ArtistRefDto>();
+
         var result = users
             .Select(u =>
             {
@@ -80,6 +97,7 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
                     .Where(n => n is not null)
                     .Cast<string>()
                     .ToList();
+                var artists = topArtistsByUser.TryGetValue(u.Id, out var a) ? a : empty;
 
                 return new
                 {
@@ -88,7 +106,7 @@ public class GetMatchesHandler(TechnoDatingDbContext db) : IRequestHandler<GetMa
                         u.DisplayName!,
                         Age: CalculateAge(u.DateOfBirth!.Value, today),
                         u.City!,
-                        u.TopArtists,
+                        artists,
                         CommonFestivals: sharedNames,
                         DistanceKm: Math.Round(u.DistanceMeters / 1000.0, 1)),
                     SharedCount = sharedNames.Count,

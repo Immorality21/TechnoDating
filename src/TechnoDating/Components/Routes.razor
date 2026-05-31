@@ -1,6 +1,7 @@
 @inject IAuthStateService Auth
+@inject ILanguageService Language
 
-@if (!restored)
+@if (!ready)
 {
     <div class="d-flex justify-content-center align-items-center" style="min-height:100vh;">
         <em>Loading…</em>
@@ -23,11 +24,12 @@ else
 }
 
 @code {
-    private bool restored;
+    private bool ready;
 
     protected override async Task OnInitializedAsync()
     {
+        await Language.InitializeAsync();
         await Auth.TryRestoreFromStorageAsync();
-        restored = true;
+        ready = true;
     }
 }

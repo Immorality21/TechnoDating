@@ -9,6 +9,5 @@ public class Festival
     public DateOnly Date { get; set; }
     public string City { get; set; } = string.Empty;
     public string Venue { get; set; } = string.Empty;
-    public List<string> HeadlineArtists { get; set; } = [];
     public Point? Location { get; set; }
 }

@@ -1,39 +1,46 @@
 @page "/onboarding"
 @attribute [Authorize]
 @layout MainLayout
+@inherits LocalizedComponentBase
 @inject IAuthStateService Auth
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Nav
 
-<h1>Welcome — tell us a bit about you</h1>
+<h1>@L["Onboarding.Heading"]</h1>
 
-<p>These help us find people you'll actually vibe with. You can fill in more on your profile later.</p>
+<p>@L["Onboarding.Intro"]</p>
 
 <EditForm Model="this" OnValidSubmit="Submit">
     <div class="mb-3">
-        <label for="displayName" class="form-label">Display name</label>
+        <label for="displayName" class="form-label">@L["Onboarding.DisplayName"]</label>
         <input id="displayName" type="text" class="form-control" @bind="displayName" maxlength="100" disabled="@busy" />
     </div>
 
     <div class="mb-3">
-        <label for="dob" class="form-label">Date of birth</label>
+        <label for="dob" class="form-label">@L["Onboarding.DateOfBirth"]</label>
         <input id="dob" type="date" class="form-control" @bind="dateOfBirth" disabled="@busy" />
     </div>
 
     <div class="mb-3">
-        <label for="gender" class="form-label">Gender</label>
+        <label for="gender" class="form-label">@L["Onboarding.Gender"]</label>
         <select id="gender" class="form-select" @bind="gender" disabled="@busy">
-            <option value="">Select…</option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-            <option value="non-binary">Non-binary</option>
-            <option value="other">Other</option>
+            <option value="">@L["Onboarding.Gender.Select"]</option>
+            <option value="female">@L["Onboarding.Gender.Female"]</option>
+            <option value="male">@L["Onboarding.Gender.Male"]</option>
+            <option value="non-binary">@L["Onboarding.Gender.NonBinary"]</option>
+            <option value="other">@L["Onboarding.Gender.Other"]</option>
         </select>
     </div>
 
     <div class="mb-3">
-        <label for="city" class="form-label">City</label>
+        <label for="city" class="form-label">@L["Onboarding.City"]</label>
         <input id="city" type="text" class="form-control" @bind="city" maxlength="100" placeholder="Amsterdam" disabled="@busy" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">@L["Onboarding.Artists.Heading"]</label>
+        <div class="text-muted small mb-2">@L["Onboarding.Artists.Hint"]</div>
+        <ArtistPicker SelectedIds="selectedArtistIds" OnChanged="StateHasChanged" Disabled="busy" />
     </div>
 
     @if (errorMessage is not null)
@@ -42,7 +49,7 @@
     }
 
     <button type="submit" class="btn btn-primary" disabled="@(!CanSubmit || busy)">
-        @(busy ? "Saving…" : "Continue")
+        @(busy ? L["Common.Saving"] : L["Onboarding.SubmitButton"])
     </button>
 </EditForm>
 
@@ -51,6 +58,7 @@
     private DateTime? dateOfBirth;
     private string gender = string.Empty;
     private string city = string.Empty;
+    private HashSet<Guid> selectedArtistIds = [];
     private bool busy;
     private string? errorMessage;
 
@@ -76,7 +84,7 @@
                 gender,
                 Bio: null,
                 city.Trim(),
-                TopArtists: [],
+                TopArtistIds: selectedArtistIds.ToList(),
                 Longitude: null,
                 Latitude: null);
 
@@ -84,13 +92,13 @@
             var response = await http.PutAsJsonAsync("/api/users/me", dto);
             if (!response.IsSuccessStatusCode)
             {
-                errorMessage = "Couldn't save. Please try again.";
+                errorMessage = L["Common.Error.SaveFailed"];
                 return;
             }
             var updated = await response.Content.ReadFromJsonAsync<UserProfileDto>();
             if (updated is null)
             {
-                errorMessage = "Unexpected response. Please try again.";
+                errorMessage = L["Common.Error.SaveFailed"];
                 return;
             }
             await Auth.SetCurrentUserAsync(updated);

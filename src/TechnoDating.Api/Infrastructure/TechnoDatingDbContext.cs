@@ -13,6 +13,9 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<UserFestivalAttendance> Attendances => Set<UserFestivalAttendance>();
+    public DbSet<Artist> Artists => Set<Artist>();
+    public DbSet<UserTopArtist> UserTopArtists => Set<UserTopArtist>();
+    public DbSet<FestivalHeadlineArtist> FestivalHeadlineArtists => Set<FestivalHeadlineArtist>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,7 +30,6 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
             b.Property(u => u.Bio).HasMaxLength(2000);
             b.Property(u => u.City).HasMaxLength(100);
             b.Property(u => u.Location).HasColumnType("geography(Point, 4326)");
-            b.Property(u => u.TopArtists).HasColumnType("text[]");
             b.Ignore(u => u.IsProfileComplete);
         });
 
@@ -37,7 +39,6 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
             b.Property(f => f.Name).IsRequired().HasMaxLength(200);
             b.Property(f => f.City).IsRequired().HasMaxLength(100);
             b.Property(f => f.Venue).IsRequired().HasMaxLength(200);
-            b.Property(f => f.HeadlineArtists).HasColumnType("text[]");
             b.Property(f => f.Location).HasColumnType("geography(Point, 4326)");
         });
 
@@ -74,6 +75,34 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
             b.HasIndex(a => a.FestivalId);
             b.HasOne(a => a.User).WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(a => a.Festival).WithMany().HasForeignKey(a => a.FestivalId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Artist>(b =>
+        {
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Name).IsRequired().HasMaxLength(200);
+            b.Property(a => a.Slug).IsRequired().HasMaxLength(200);
+            b.Property(a => a.Genre).HasMaxLength(64);
+            b.HasIndex(a => a.Slug).IsUnique();
+            b.HasIndex(a => a.Name);
+        });
+
+        modelBuilder.Entity<UserTopArtist>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.UserId, x.ArtistId }).IsUnique();
+            b.HasIndex(x => x.UserId);
+            b.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.Artist).WithMany().HasForeignKey(x => x.ArtistId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FestivalHeadlineArtist>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.FestivalId, x.ArtistId }).IsUnique();
+            b.HasIndex(x => x.FestivalId);
+            b.HasOne(x => x.Festival).WithMany().HasForeignKey(x => x.FestivalId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.Artist).WithMany().HasForeignKey(x => x.ArtistId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

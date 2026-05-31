@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="Common.Loading" xml:space="preserve"><value>Laden…</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>Opslaan</value></data>
+  <data name="Common.Saving" xml:space="preserve"><value>Opslaan…</value></data>
+  <data name="Common.Saved" xml:space="preserve"><value>Opgeslagen.</value></data>
+  <data name="Common.Submit" xml:space="preserve"><value>Verzenden</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Annuleren</value></data>
+  <data name="Common.Verifying" xml:space="preserve"><value>Verifiëren…</value></data>
+  <data name="Common.Sending" xml:space="preserve"><value>Versturen…</value></data>
+  <data name="Common.Logout" xml:space="preserve"><value>Uitloggen</value></data>
+  <data name="Common.None" xml:space="preserve"><value>—</value></data>
+  <data name="Common.Error.ApiUnreachable" xml:space="preserve"><value>Kan de API niet bereiken.</value></data>
+  <data name="Common.Error.ApiUnreachableHint" xml:space="preserve"><value>Controleer of TechnoDating.Api draait op http://localhost:5000.</value></data>
+  <data name="Common.Error.LoadFailed" xml:space="preserve"><value>Laden mislukt. Probeer het opnieuw.</value></data>
+  <data name="Common.Error.SaveFailed" xml:space="preserve"><value>Opslaan mislukt. Probeer het opnieuw.</value></data>
+
+  <data name="Nav.Home" xml:space="preserve"><value>Home</value></data>
+  <data name="Nav.Festivals" xml:space="preserve"><value>Festivals</value></data>
+  <data name="Nav.Matches" xml:space="preserve"><value>Matches</value></data>
+  <data name="Nav.Profile" xml:space="preserve"><value>Profiel</value></data>
+  <data name="Nav.SignIn" xml:space="preserve"><value>Inloggen</value></data>
+
+  <data name="Auth.Login.Heading" xml:space="preserve"><value>Inloggen</value></data>
+  <data name="Auth.Login.Intro" xml:space="preserve"><value>Vul je telefoonnummer in. We sturen je een eenmalige code.</value></data>
+  <data name="Auth.Login.PhoneLabel" xml:space="preserve"><value>Telefoonnummer</value></data>
+  <data name="Auth.Login.SubmitButton" xml:space="preserve"><value>Stuur code</value></data>
+  <data name="Auth.Login.Error.SendFailed" xml:space="preserve"><value>Code versturen mislukt. Controleer het nummer of wacht een minuut.</value></data>
+
+  <data name="Auth.VerifyOtp.Heading" xml:space="preserve"><value>Vul je code in</value></data>
+  <data name="Auth.VerifyOtp.Intro" xml:space="preserve"><value>We hebben een 6-cijferige code gestuurd naar {0}.</value></data>
+  <data name="Auth.VerifyOtp.CodeLabel" xml:space="preserve"><value>Code</value></data>
+  <data name="Auth.VerifyOtp.SubmitButton" xml:space="preserve"><value>Verifiëren</value></data>
+  <data name="Auth.VerifyOtp.UseDifferentNumber" xml:space="preserve"><value>Gebruik een ander nummer</value></data>
+  <data name="Auth.VerifyOtp.Error.Invalid" xml:space="preserve"><value>Ongeldige of verlopen code. Probeer opnieuw.</value></data>
+
+  <data name="Onboarding.Heading" xml:space="preserve"><value>Welkom — vertel iets over jezelf</value></data>
+  <data name="Onboarding.Intro" xml:space="preserve"><value>Dit helpt ons mensen te vinden waar je echt mee klikt. De rest van je profiel kun je later invullen.</value></data>
+  <data name="Onboarding.DisplayName" xml:space="preserve"><value>Weergavenaam</value></data>
+  <data name="Onboarding.DateOfBirth" xml:space="preserve"><value>Geboortedatum</value></data>
+  <data name="Onboarding.Gender" xml:space="preserve"><value>Geslacht</value></data>
+  <data name="Onboarding.Gender.Select" xml:space="preserve"><value>Kies…</value></data>
+  <data name="Onboarding.Gender.Female" xml:space="preserve"><value>Vrouw</value></data>
+  <data name="Onboarding.Gender.Male" xml:space="preserve"><value>Man</value></data>
+  <data name="Onboarding.Gender.NonBinary" xml:space="preserve"><value>Non-binair</value></data>
+  <data name="Onboarding.Gender.Other" xml:space="preserve"><value>Anders</value></data>
+  <data name="Onboarding.City" xml:space="preserve"><value>Stad</value></data>
+  <data name="Onboarding.SubmitButton" xml:space="preserve"><value>Doorgaan</value></data>
+  <data name="Onboarding.Artists.Heading" xml:space="preserve"><value>Kies een paar favoriete artiesten (optioneel)</value></data>
+  <data name="Onboarding.Artists.Hint" xml:space="preserve"><value>Kies er minstens 3 om te matchen op muzieksmaak. Dit kun je later aanpassen.</value></data>
+
+  <data name="Profile.Heading" xml:space="preserve"><value>Jouw profiel</value></data>
+  <data name="Profile.Phone" xml:space="preserve"><value>Telefoon</value></data>
+  <data name="Profile.Bio" xml:space="preserve"><value>Bio</value></data>
+  <data name="Profile.TopArtists" xml:space="preserve"><value>Favoriete artiesten</value></data>
+  <data name="Profile.Language" xml:space="preserve"><value>Taal</value></data>
+
+  <data name="Home.Heading" xml:space="preserve"><value>TechnoDating</value></data>
+  <data name="Home.Tagline" xml:space="preserve"><value>Match op de muziek. Ontmoet op het volgende feest.</value></data>
+  <data name="Home.Intro" xml:space="preserve"><value>Tik op Festivals voor de lineup; tik op Matches om te zien met wie je klikt.</value></data>
+
+  <data name="Festivals.Heading" xml:space="preserve"><value>Aankomende techno-avonden</value></data>
+  <data name="Festivals.Col.Date" xml:space="preserve"><value>Datum</value></data>
+  <data name="Festivals.Col.Festival" xml:space="preserve"><value>Festival</value></data>
+  <data name="Festivals.Col.City" xml:space="preserve"><value>Stad</value></data>
+  <data name="Festivals.Col.Lineup" xml:space="preserve"><value>Lineup</value></data>
+  <data name="Festivals.Col.Going" xml:space="preserve"><value>Gaat</value></data>
+  <data name="Festivals.Col.YourArtists" xml:space="preserve"><value>Jouw artiesten</value></data>
+  <data name="Festivals.Col.YourStatus" xml:space="preserve"><value>Jouw status</value></data>
+  <data name="Festivals.ArtistsMatch.One" xml:space="preserve"><value>{0} match</value></data>
+  <data name="Festivals.ArtistsMatch.Many" xml:space="preserve"><value>{0} matches</value></data>
+  <data name="Festivals.AllFestivalsLink" xml:space="preserve"><value>← Alle festivals</value></data>
+  <data name="Festivals.WhosGoing" xml:space="preserve"><value>Wie gaat er</value></data>
+  <data name="Festivals.WhosGoing.Empty" xml:space="preserve"><value>Er is nog niemand uit jouw match-kring die heeft aangegeven te gaan.</value></data>
+  <data name="Festivals.MyStatusLabel" xml:space="preserve"><value>Jouw status:</value></data>
+  <data name="Festivals.GoingCount" xml:space="preserve"><value>{0} gaat</value></data>
+
+  <data name="Attendance.Status.None" xml:space="preserve"><value>— (niet ingesteld)</value></data>
+  <data name="Attendance.Status.Interested" xml:space="preserve"><value>Interesse</value></data>
+  <data name="Attendance.Status.Going" xml:space="preserve"><value>Ga ernaartoe</value></data>
+  <data name="Attendance.Status.Ticketed" xml:space="preserve"><value>Heb ticket</value></data>
+
+  <data name="Matches.Heading" xml:space="preserve"><value>Jouw matches</value></data>
+  <data name="Matches.Empty" xml:space="preserve"><value>Nog geen matches — geef aan naar welk festival je gaat om te zien wie er ook is.</value></data>
+  <data name="Matches.Card.KmAway" xml:space="preserve"><value>{0} km verderop</value></data>
+  <data name="Matches.Card.TopArtists" xml:space="preserve"><value>Favoriete artiesten:</value></data>
+  <data name="Matches.Card.SharedFestivals" xml:space="preserve"><value>Gedeelde festivals:</value></data>
+</root>

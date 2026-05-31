@@ -1,0 +1,32 @@
+@code {
+    [Parameter, EditorRequired] public string DisplayName { get; set; } = string.Empty;
+    [Parameter] public Guid? UserId { get; set; }
+    [Parameter] public string Size { get; set; } = "48px";
+
+    private string Initial =>
+        string.IsNullOrWhiteSpace(DisplayName) ? "?" : DisplayName.Trim()[..1].ToUpperInvariant();
+
+    private string Color
+    {
+        get
+        {
+            var seed = UserId?.ToString() ?? DisplayName;
+            return HashToHsl(seed);
+        }
+    }
+
+    private static string HashToHsl(string seed)
+    {
+        var hash = 17;
+        foreach (var c in seed)
+        {
+            hash = unchecked(hash * 31 + c);
+        }
+        var hue = ((hash % 360) + 360) % 360;
+        return $"hsl({hue}, 48%, 38%)";
+    }
+}
+
+<span class="avatar-circle" style="width:@Size; height:@Size; background:@Color;">
+    <span class="avatar-initial">@Initial</span>
+</span>

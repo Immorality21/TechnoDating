@@ -14,6 +14,12 @@ public class GetMeHandler(TechnoDatingDbContext db) : IRequestHandler<GetMeReque
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
-        return user?.ToProfileDto();
+        if (user is null)
+        {
+            return null;
+        }
+
+        var topArtists = await db.LoadTopArtistsAsync(user.Id, cancellationToken);
+        return user.ToProfileDto(topArtists);
     }
 }

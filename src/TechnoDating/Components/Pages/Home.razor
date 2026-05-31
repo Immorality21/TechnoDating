@@ -1,17 +1,9 @@
 @page "/"
 @attribute [Authorize]
+@inherits LocalizedComponentBase
 
-<h1>TechnoDating</h1>
+<h1>@L["Home.Heading"]</h1>
 
-<p class="lead">Match on the music. Meet at the next show.</p>
+<p class="lead">@L["Home.Tagline"]</p>
 
-<p>
-    This is a wired-up scaffold. The API is a separate project (<code>TechnoDating.Api</code>) that
-    returns test data over HTTP. Open the <a href="festivals">Festivals</a> or
-    <a href="matches">Matches</a> pages to see the round-trip working.
-</p>
-
-<p class="text-muted">
-    Run the API first with <code>dotnet run --project src/TechnoDating.Api</code>,
-    then start the mobile app.
-</p>
+<p>@L["Home.Intro"]</p>

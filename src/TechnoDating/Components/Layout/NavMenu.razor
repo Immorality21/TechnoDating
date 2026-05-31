@@ -1,3 +1,4 @@
+@inherits LocalizedComponentBase
 @inject IAuthStateService Auth
 @inject NavigationManager Nav
 
@@ -15,34 +16,34 @@
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> @L["Nav.Home"]
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="festivals">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Festivals
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> @L["Nav.Festivals"]
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="matches">
-                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Matches
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> @L["Nav.Matches"]
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="me">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Profile
+                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @L["Nav.Profile"]
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <button class="nav-link btn btn-link text-start" @onclick="Logout">
-                        <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Logout
+                        <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> @L["Common.Logout"]
                     </button>
                 </div>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="login">
-                        <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Sign in
+                        <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> @L["Nav.SignIn"]
                     </NavLink>
                 </div>
             </NotAuthorized>

@@ -32,7 +32,6 @@ public class GetFestivalAttendeesHandler(TechnoDatingDbContext db) : IRequestHan
                 u.DisplayName,
                 u.DateOfBirth,
                 u.City,
-                u.TopArtists,
                 DistanceMeters = me!.Location != null && u.Location != null
                     ? u.Location.Distance(me.Location)
                     : (double?)null,
@@ -42,12 +41,30 @@ public class GetFestivalAttendeesHandler(TechnoDatingDbContext db) : IRequestHan
             ? await query.ToListAsync(cancellationToken)
             : await query.OrderBy(x => x.DistanceMeters ?? double.MaxValue).ToListAsync(cancellationToken);
 
+        if (rows.Count == 0)
+        {
+            return [];
+        }
+
+        var attendeeIds = rows.Select(r => r.Id).ToList();
+        var topArtistRows = await db.UserTopArtists
+            .AsNoTracking()
+            .Where(x => attendeeIds.Contains(x.UserId))
+            .OrderBy(x => x.Rank)
+            .Join(db.Artists, x => x.ArtistId, a => a.Id, (x, a) => new { x.UserId, Artist = new ArtistRefDto(a.Id, a.Name) })
+            .ToListAsync(cancellationToken);
+        var topArtistsByUser = topArtistRows
+            .GroupBy(x => x.UserId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ArtistRefDto>)g.Select(x => x.Artist).ToList());
+
+        var empty = (IReadOnlyList<ArtistRefDto>)Array.Empty<ArtistRefDto>();
+
         return rows.Select(u => new MatchProfileDto(
             u.Id,
             u.DisplayName!,
             Age: CalculateAge(u.DateOfBirth!.Value, today),
             u.City!,
-            u.TopArtists,
+            topArtistsByUser.TryGetValue(u.Id, out var artists) ? artists : empty,
             CommonFestivals: [],
             DistanceKm: u.DistanceMeters.HasValue ? Math.Round(u.DistanceMeters.Value / 1000.0, 1) : 0))
             .ToList();

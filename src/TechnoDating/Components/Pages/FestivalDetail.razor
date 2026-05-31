@@ -1,5 +1,6 @@
 @page "/festivals/{FestivalId:guid}"
 @attribute [Authorize]
+@inherits LocalizedComponentBase
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Nav
 
@@ -11,44 +12,45 @@
 }
 else if (festival is null)
 {
-    <p><em>Loading…</em></p>
+    <p><em>@L["Common.Loading"]</em></p>
 }
 else
 {
-    <p class="mb-2"><a href="/festivals">← All festivals</a></p>
+    <p class="mb-2"><a href="/festivals">@L["Festivals.AllFestivalsLink"]</a></p>
     <h1>@festival.Name</h1>
     <p class="text-muted">
-        @festival.Date.ToString("dddd d MMMM yyyy") · @festival.City · @festival.Venue
+        @festival.Date.ToString("dddd d MMMM yyyy", System.Globalization.CultureInfo.CurrentUICulture) · @festival.City · @festival.Venue
     </p>
 
     <div class="mb-3">
-        <strong>Lineup highlights:</strong> @string.Join(" · ", festival.HeadlineArtists)
+        <strong>@L["Festivals.Col.Lineup"]:</strong> @string.Join(" · ", festival.HeadlineArtists.Select(a => a.Name))
         @if (festival.MatchingArtistsCount > 0)
         {
-            <span class="badge bg-success ms-2">@festival.MatchingArtistsCount of your top artists</span>
+            var key = festival.MatchingArtistsCount == 1 ? "Festivals.ArtistsMatch.One" : "Festivals.ArtistsMatch.Many";
+            <span class="badge bg-success ms-2">@string.Format(L[key], festival.MatchingArtistsCount)</span>
         }
     </div>
 
     <div class="mb-3 d-flex align-items-center gap-2">
-        <span><strong>Your status:</strong></span>
-        <select class="form-select form-select-sm" style="max-width:200px" value="@(festival.MyStatus?.ToString() ?? "")"
+        <span><strong>@L["Festivals.MyStatusLabel"]</strong></span>
+        <select class="form-select form-select-sm" style="max-width:220px" value="@(festival.MyStatus?.ToString() ?? "")"
                 @onchange="@(async e => await OnStatusChanged(e.Value as string))">
-            <option value="">— (not set)</option>
-            <option value="Interested">Interested</option>
-            <option value="Going">Going</option>
-            <option value="Ticketed">Ticketed</option>
+            <option value="">@L["Attendance.Status.None"]</option>
+            <option value="Interested">@L["Attendance.Status.Interested"]</option>
+            <option value="Going">@L["Attendance.Status.Going"]</option>
+            <option value="Ticketed">@L["Attendance.Status.Ticketed"]</option>
         </select>
-        <span class="text-muted small">@festival.AttendingCount going</span>
+        <span class="text-muted small">@string.Format(L["Festivals.GoingCount"], festival.AttendingCount)</span>
     </div>
 
-    <h2 class="mt-4">Who's going</h2>
+    <h2 class="mt-4">@L["Festivals.WhosGoing"]</h2>
     @if (attendees is null)
     {
-        <p><em>Loading…</em></p>
+        <p><em>@L["Common.Loading"]</em></p>
     }
     else if (attendees.Length == 0)
     {
-        <p class="text-muted">Nobody you'd match with has marked themselves as attending yet.</p>
+        <p class="text-muted">@L["Festivals.WhosGoing.Empty"]</p>
     }
     else
     {
@@ -58,11 +60,16 @@ else
                 <div class="col-md-6">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h5 class="card-title mb-1">@a.DisplayName, @a.Age</h5>
-                            <h6 class="card-subtitle text-muted mb-3">
-                                @a.City · @a.DistanceKm.ToString("0.#") km away
-                            </h6>
-                            <p class="mb-0"><strong>Top artists:</strong> @string.Join(" · ", a.TopArtists)</p>
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <Avatar DisplayName="@a.DisplayName" UserId="@a.Id" Size="52px" />
+                                <div>
+                                    <h5 class="card-title mb-0">@a.DisplayName, @a.Age</h5>
+                                    <h6 class="card-subtitle text-muted">
+                                        @a.City · @string.Format(L["Matches.Card.KmAway"], a.DistanceKm.ToString("0.#"))
+                                    </h6>
+                                </div>
+                            </div>
+                            <p class="mb-0"><strong>@L["Matches.Card.TopArtists"]</strong> @string.Join(" · ", a.TopArtists.Select(x => x.Name))</p>
                         </div>
                     </div>
                 </div>
@@ -80,6 +87,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        base.OnInitialized();
         await LoadAsync();
     }
 
@@ -92,7 +100,7 @@ else
             festival = list?.FirstOrDefault(f => f.Id == FestivalId);
             if (festival is null)
             {
-                loadError = "Festival not found.";
+                loadError = L["Common.Error.LoadFailed"];
                 return;
             }
             attendees = await http.GetFromJsonAsync<MatchProfileDto[]>($"/api/festivals/{FestivalId}/attendees");

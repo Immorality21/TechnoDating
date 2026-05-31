@@ -8,6 +8,6 @@ public record UserProfileDto(
     string? Gender,
     string? Bio,
     string? City,
-    IReadOnlyList<string> TopArtists,
+    IReadOnlyList<ArtistRefDto> TopArtists,
     bool IsVerified,
     bool IsProfileComplete);

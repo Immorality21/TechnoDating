@@ -5,6 +5,6 @@ public record MatchProfileDto(
     string DisplayName,
     int Age,
     string City,
-    IReadOnlyList<string> TopArtists,
+    IReadOnlyList<ArtistRefDto> TopArtists,
     IReadOnlyList<string> CommonFestivals,
     double DistanceKm);

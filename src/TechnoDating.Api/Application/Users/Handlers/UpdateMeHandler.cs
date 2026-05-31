@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using TechnoDating.Api.Application.Users.Requests;
 using TechnoDating.Api.Infrastructure;
+using TechnoDating.Api.Infrastructure.Entities;
 using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Users.Handlers;
@@ -23,14 +24,40 @@ public class UpdateMeHandler(TechnoDatingDbContext db) : IRequestHandler<UpdateM
         user.Gender = p.Gender;
         user.Bio = p.Bio;
         user.City = p.City;
-        user.TopArtists = p.TopArtists.ToList();
         if (p.Longitude.HasValue && p.Latitude.HasValue)
         {
             user.Location = new Point(p.Longitude.Value, p.Latitude.Value) { SRID = 4326 };
         }
         user.LastActiveAt = DateTimeOffset.UtcNow;
 
+        await db.UserTopArtists.Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+
+        if (p.TopArtistIds.Count > 0)
+        {
+            var requestedIds = p.TopArtistIds.Distinct().ToList();
+            var validIds = await db.Artists
+                .AsNoTracking()
+                .Where(a => requestedIds.Contains(a.Id))
+                .Select(a => a.Id)
+                .ToListAsync(cancellationToken);
+            var validSet = validIds.ToHashSet();
+
+            var rank = 1;
+            foreach (var artistId in requestedIds.Where(id => validSet.Contains(id)))
+            {
+                db.UserTopArtists.Add(new UserTopArtist
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    ArtistId = artistId,
+                    Rank = rank++,
+                });
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
-        return user.ToProfileDto();
+
+        var topArtists = await db.LoadTopArtistsAsync(user.Id, cancellationToken);
+        return user.ToProfileDto(topArtists);
     }
 }

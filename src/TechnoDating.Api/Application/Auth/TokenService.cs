@@ -43,11 +43,12 @@ public class TokenService(
         });
         await db.SaveChangesAsync(cancellationToken);
 
+        var topArtists = await db.LoadTopArtistsAsync(user.Id, cancellationToken);
         return new AuthResponseDto(
             accessToken,
             refreshPlaintext,
             accessExpires,
-            user.ToProfileDto());
+            user.ToProfileDto(topArtists));
     }
 
     public async Task<AuthResponseDto?> RefreshAsync(string refreshTokenPlaintext, CancellationToken cancellationToken)

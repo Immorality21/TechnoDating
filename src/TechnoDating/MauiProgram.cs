@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using TechnoDating.Services;
 
@@ -26,7 +27,10 @@ namespace TechnoDating
             builder.Services.AddMauiBlazorWebView();
             builder.Services.AddAuthorizationCore();
 
+            builder.Services.AddLocalization();
+
             builder.Services.AddSingleton<IAuthStateService, AuthStateService>();
+            builder.Services.AddSingleton<ILanguageService, LanguageService>();
             builder.Services.AddScoped<AuthenticationStateProvider, TechnoDatingAuthenticationStateProvider>();
             builder.Services.AddTransient<AuthMessageHandler>();
 

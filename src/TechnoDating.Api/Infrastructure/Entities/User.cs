@@ -11,7 +11,6 @@ public class User : IdentityUser<Guid>
     public string? Bio { get; set; }
     public string? City { get; set; }
     public Point? Location { get; set; }
-    public List<string> TopArtists { get; set; } = [];
     public bool IsVerified { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset LastActiveAt { get; set; }

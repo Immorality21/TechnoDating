@@ -1,58 +1,72 @@
 @page "/me"
 @attribute [Authorize]
 @layout MainLayout
+@inherits LocalizedComponentBase
 @inject IAuthStateService Auth
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Nav
 
-<h1>Your profile</h1>
+<h1>@L["Profile.Heading"]</h1>
 
 @if (profile is null)
 {
-    <p><em>Loading…</em></p>
+    <p><em>@L["Common.Loading"]</em></p>
 }
 else
 {
     <EditForm Model="this" OnValidSubmit="Save">
         <div class="mb-3">
-            <label class="form-label">Phone</label>
+            <label class="form-label">@L["Profile.Phone"]</label>
             <input class="form-control" value="@profile.PhoneNumber" disabled />
         </div>
 
         <div class="mb-3">
-            <label for="displayName" class="form-label">Display name</label>
+            <label for="displayName" class="form-label">@L["Onboarding.DisplayName"]</label>
             <input id="displayName" class="form-control" @bind="displayName" maxlength="100" disabled="@busy" />
         </div>
 
         <div class="mb-3">
-            <label for="dob" class="form-label">Date of birth</label>
+            <label for="dob" class="form-label">@L["Onboarding.DateOfBirth"]</label>
             <input id="dob" type="date" class="form-control" @bind="dateOfBirth" disabled="@busy" />
         </div>
 
         <div class="mb-3">
-            <label for="gender" class="form-label">Gender</label>
+            <label for="gender" class="form-label">@L["Onboarding.Gender"]</label>
             <select id="gender" class="form-select" @bind="gender" disabled="@busy">
-                <option value="">Select…</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="non-binary">Non-binary</option>
-                <option value="other">Other</option>
+                <option value="">@L["Onboarding.Gender.Select"]</option>
+                <option value="female">@L["Onboarding.Gender.Female"]</option>
+                <option value="male">@L["Onboarding.Gender.Male"]</option>
+                <option value="non-binary">@L["Onboarding.Gender.NonBinary"]</option>
+                <option value="other">@L["Onboarding.Gender.Other"]</option>
             </select>
         </div>
 
         <div class="mb-3">
-            <label for="city" class="form-label">City</label>
+            <label for="city" class="form-label">@L["Onboarding.City"]</label>
             <input id="city" class="form-control" @bind="city" maxlength="100" disabled="@busy" />
         </div>
 
         <div class="mb-3">
-            <label for="bio" class="form-label">Bio</label>
+            <label for="bio" class="form-label">@L["Profile.Bio"]</label>
             <textarea id="bio" class="form-control" rows="3" @bind="bio" maxlength="2000" disabled="@busy"></textarea>
         </div>
 
         <div class="mb-3">
-            <label for="artists" class="form-label">Top artists (comma-separated)</label>
-            <input id="artists" class="form-control" @bind="topArtistsCsv" disabled="@busy" />
+            <label class="form-label">@L["Profile.TopArtists"]</label>
+            <ArtistPicker SelectedIds="selectedArtistIds" OnChanged="StateHasChanged" Disabled="busy" />
+        </div>
+
+        <div class="mb-3">
+            <label for="language" class="form-label">@L["Profile.Language"]</label>
+            <select id="language" class="form-select" value="@Language.CurrentLanguage"
+                    style="max-width:240px"
+                    @onchange="@(async e => await Language.SetLanguageAsync(e.Value as string ?? "en"))"
+                    disabled="@busy">
+                @foreach (var lang in Language.AvailableLanguages)
+                {
+                    <option value="@lang.Code">@lang.DisplayName</option>
+                }
+            </select>
         </div>
 
         @if (message is not null)
@@ -61,10 +75,10 @@ else
         }
 
         <button type="submit" class="btn btn-primary" disabled="@(!CanSubmit || busy)">
-            @(busy ? "Saving…" : "Save")
+            @(busy ? L["Common.Saving"] : L["Common.Save"])
         </button>
         <button type="button" class="btn btn-outline-danger ms-2" @onclick="Logout" disabled="@busy">
-            Logout
+            @L["Common.Logout"]
         </button>
     </EditForm>
 }
@@ -76,7 +90,7 @@ else
     private string gender = string.Empty;
     private string city = string.Empty;
     private string bio = string.Empty;
-    private string topArtistsCsv = string.Empty;
+    private HashSet<Guid> selectedArtistIds = [];
     private bool busy;
     private string? message;
 
@@ -88,6 +102,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        base.OnInitialized();
         var http = HttpClientFactory.CreateClient("api");
         try
         {
@@ -99,7 +114,7 @@ else
                 gender = profile.Gender ?? string.Empty;
                 city = profile.City ?? string.Empty;
                 bio = profile.Bio ?? string.Empty;
-                topArtistsCsv = string.Join(", ", profile.TopArtists);
+                selectedArtistIds = profile.TopArtists.Select(a => a.Id).ToHashSet();
             }
         }
         catch (Exception ex)
@@ -118,17 +133,13 @@ else
         message = null;
         try
         {
-            var artists = topArtistsCsv
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .ToList();
-
             var dto = new UpdateProfileDto(
                 displayName.Trim(),
                 DateOnly.FromDateTime(dateOfBirth!.Value),
                 gender,
                 string.IsNullOrWhiteSpace(bio) ? null : bio.Trim(),
                 city.Trim(),
-                artists,
+                selectedArtistIds.ToList(),
                 Longitude: null,
                 Latitude: null);
 
@@ -136,15 +147,16 @@ else
             var response = await http.PutAsJsonAsync("/api/users/me", dto);
             if (!response.IsSuccessStatusCode)
             {
-                message = "Save failed.";
+                message = L["Common.Error.SaveFailed"];
                 return;
             }
             var updated = await response.Content.ReadFromJsonAsync<UserProfileDto>();
             if (updated is not null)
             {
                 profile = updated;
+                selectedArtistIds = updated.TopArtists.Select(a => a.Id).ToHashSet();
                 await Auth.SetCurrentUserAsync(updated);
-                message = "Saved.";
+                message = L["Common.Saved"];
             }
         }
         catch (Exception ex)

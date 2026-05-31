@@ -1,15 +1,16 @@
 @page "/verify-otp"
 @layout MainLayout
+@inherits LocalizedComponentBase
 @inject IAuthStateService Auth
 @inject NavigationManager Nav
 
-<h1>Enter your code</h1>
+<h1>@L["Auth.VerifyOtp.Heading"]</h1>
 
-<p>We sent a 6-digit code to <strong>@phoneNumber</strong>.</p>
+<p>@((MarkupString)string.Format(L["Auth.VerifyOtp.Intro"], $"<strong>{phoneNumber}</strong>"))</p>
 
 <EditForm Model="this" OnValidSubmit="Submit">
     <div class="mb-3">
-        <label for="code" class="form-label">Code</label>
+        <label for="code" class="form-label">@L["Auth.VerifyOtp.CodeLabel"]</label>
         <input id="code" type="text" inputmode="numeric" maxlength="6" class="form-control"
                @bind="code" placeholder="123456" autocomplete="one-time-code" disabled="@busy" />
     </div>
@@ -20,9 +21,9 @@
     }
 
     <button type="submit" class="btn btn-primary" disabled="@(busy || code.Length != 6)">
-        @(busy ? "Verifying…" : "Verify")
+        @(busy ? L["Common.Verifying"] : L["Auth.VerifyOtp.SubmitButton"])
     </button>
-    <a href="/login" class="btn btn-link">Use a different number</a>
+    <a href="/login" class="btn btn-link">@L["Auth.VerifyOtp.UseDifferentNumber"]</a>
 </EditForm>
 
 @code {
@@ -35,6 +36,7 @@
 
     protected override void OnInitialized()
     {
+        base.OnInitialized();
         phoneNumber = PhoneParam ?? string.Empty;
         if (string.IsNullOrWhiteSpace(phoneNumber))
         {
@@ -51,7 +53,7 @@
             var ok = await Auth.VerifyOtpAsync(phoneNumber, code);
             if (!ok)
             {
-                errorMessage = "Invalid or expired code. Try again.";
+                errorMessage = L["Auth.VerifyOtp.Error.Invalid"];
                 return;
             }
             var user = Auth.CurrentUser;

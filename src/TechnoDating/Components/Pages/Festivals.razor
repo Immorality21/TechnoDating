@@ -1,22 +1,20 @@
 @page "/festivals"
 @attribute [Authorize]
+@inherits LocalizedComponentBase
 @inject IHttpClientFactory HttpClientFactory
-@inject NavigationManager Nav
 
-<h1>Upcoming techno nights</h1>
-
-<p>Pulled live from <code>GET /api/festivals</code>.</p>
+<h1>@L["Festivals.Heading"]</h1>
 
 @if (festivals is null)
 {
-    <p><em>Loading…</em></p>
+    <p><em>@L["Common.Loading"]</em></p>
 }
 else if (loadError is not null)
 {
     <div class="alert alert-danger">
-        <strong>Couldn't reach the API.</strong>
+        <strong>@L["Common.Error.ApiUnreachable"]</strong>
         <div><code>@loadError</code></div>
-        <div class="mt-2">Make sure <code>TechnoDating.Api</code> is running on <code>http://localhost:5000</code>.</div>
+        <div class="mt-2">@L["Common.Error.ApiUnreachableHint"]</div>
     </div>
 }
 else
@@ -24,31 +22,32 @@ else
     <table class="table align-middle">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Festival</th>
-                <th>City</th>
-                <th>Lineup highlights</th>
-                <th class="text-end">Going</th>
-                <th class="text-end">Your top artists</th>
-                <th>Your status</th>
+                <th>@L["Festivals.Col.Date"]</th>
+                <th>@L["Festivals.Col.Festival"]</th>
+                <th>@L["Festivals.Col.City"]</th>
+                <th>@L["Festivals.Col.Lineup"]</th>
+                <th class="text-end">@L["Festivals.Col.Going"]</th>
+                <th class="text-end">@L["Festivals.Col.YourArtists"]</th>
+                <th>@L["Festivals.Col.YourStatus"]</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var f in festivals)
             {
                 <tr>
-                    <td>@f.Date.ToString("ddd d MMM yyyy")</td>
+                    <td>@f.Date.ToString("ddd d MMM yyyy", System.Globalization.CultureInfo.CurrentUICulture)</td>
                     <td>
                         <a href="@($"/festivals/{f.Id}")"><strong>@f.Name</strong></a>
                         <div class="text-muted small">@f.Venue</div>
                     </td>
                     <td>@f.City</td>
-                    <td>@string.Join(" · ", f.HeadlineArtists)</td>
+                    <td>@string.Join(" · ", f.HeadlineArtists.Select(a => a.Name))</td>
                     <td class="text-end">@f.AttendingCount</td>
                     <td class="text-end">
                         @if (f.MatchingArtistsCount > 0)
                         {
-                            <span class="badge bg-success">@f.MatchingArtistsCount match@(f.MatchingArtistsCount > 1 ? "es" : "")</span>
+                            var key = f.MatchingArtistsCount == 1 ? "Festivals.ArtistsMatch.One" : "Festivals.ArtistsMatch.Many";
+                            <span class="badge bg-success">@string.Format(L[key], f.MatchingArtistsCount)</span>
                         }
                         else
                         {
@@ -58,10 +57,10 @@ else
                     <td>
                         <select class="form-select form-select-sm" value="@(f.MyStatus?.ToString() ?? "")"
                                 @onchange="@(async e => await OnStatusChanged(f.Id, e.Value as string))">
-                            <option value="">—</option>
-                            <option value="Interested">Interested</option>
-                            <option value="Going">Going</option>
-                            <option value="Ticketed">Ticketed</option>
+                            <option value="">@L["Common.None"]</option>
+                            <option value="Interested">@L["Attendance.Status.Interested"]</option>
+                            <option value="Going">@L["Attendance.Status.Going"]</option>
+                            <option value="Ticketed">@L["Attendance.Status.Ticketed"]</option>
                         </select>
                     </td>
                 </tr>
@@ -76,6 +75,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        base.OnInitialized();
         await LoadAsync();
     }
 
