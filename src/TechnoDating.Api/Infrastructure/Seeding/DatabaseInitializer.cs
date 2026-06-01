@@ -121,15 +121,15 @@ public class DatabaseInitializer(IServiceProvider services, ILogger<DatabaseInit
         await db.SaveChangesAsync(cancellationToken);
 
         // ---- Users + top artists ----
-        var seedUsers = new (Guid Id, string Phone, string DisplayName, DateOnly Dob, string Gender, string Bio, string City, Point Location, string[] TopArtists, bool Verified)[]
+        var seedUsers = new (Guid Id, string Phone, string DisplayName, DateOnly Dob, string Gender, string Bio, string City, string[] TopArtists, bool Verified)[]
         {
-            (Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), "+31600000001", "Sofie", new DateOnly(1997, 4, 12), "female", "Industrial techno and long sets.", "Amsterdam", Point(4.90, 52.37),
+            (Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), "+31600000001", "Sofie", new DateOnly(1997, 4, 12), "female", "Industrial techno and long sets.", "Amsterdam",
                 ["Charlotte de Witte", "Amelie Lens", "Reinier Zonneveld"], true),
-            (Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), "+31600000002", "Daan", new DateOnly(1994, 11, 3), "male", "Melodic techno fan, ADE regular.", "Utrecht", Point(5.12, 52.09),
+            (Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), "+31600000002", "Daan", new DateOnly(1994, 11, 3), "male", "Melodic techno fan, ADE regular.", "Utrecht",
                 ["Mind Against", "Tale Of Us", "Boris Brejcha"], true),
-            (Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), "+31600000003", "Lieke", new DateOnly(1999, 2, 28), "female", "Hard techno, no small talk.", "Amsterdam", Point(4.92, 52.36),
+            (Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), "+31600000003", "Lieke", new DateOnly(1999, 2, 28), "female", "Hard techno, no small talk.", "Amsterdam",
                 ["Anfisa Letyago", "Indira Paganotto", "I Hate Models"], false),
-            (Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"), "+31600000004", "Maud", new DateOnly(1996, 8, 21), "female", "House over techno, always dancing.", "Amsterdam", Point(4.88, 52.38),
+            (Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"), "+31600000004", "Maud", new DateOnly(1996, 8, 21), "female", "House over techno, always dancing.", "Amsterdam",
                 ["Honey Dijon", "Job Jobse", "Carista"], true),
         };
 
@@ -146,7 +146,6 @@ public class DatabaseInitializer(IServiceProvider services, ILogger<DatabaseInit
                 Gender = seed.Gender,
                 Bio = seed.Bio,
                 City = seed.City,
-                Location = seed.Location,
                 IsVerified = seed.Verified,
                 CreatedAt = now,
                 LastActiveAt = now,

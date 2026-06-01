@@ -8,31 +8,26 @@ using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Discovery.Handlers;
 
+/// <summary>
+/// The candidate feed. Ranked by shared festivals → music-taste overlap → everyone else.
+/// Physical/home distance is deliberately NOT a signal — the geography that matters is which
+/// shows you both attend, not where you each live. See docs/MATCHING.md.
+/// </summary>
 public class GetDiscoveryHandler(TechnoDatingDbContext db, IBlobStorage storage) : IRequestHandler<GetDiscoveryRequest, IReadOnlyList<MatchProfileDto>>
 {
     public async Task<IReadOnlyList<MatchProfileDto>> Handle(GetDiscoveryRequest request, CancellationToken cancellationToken)
     {
-        var me = await db.Users
-            .AsNoTracking()
-            .Where(u => u.Id == request.CurrentUserId)
-            .Select(u => new { u.Location })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (me?.Location is null)
-        {
-            return [];
-        }
-
-        var center = me.Location;
+        var meId = request.CurrentUserId;
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-        var myCommittedFestivalIds = await db.Attendances
+        // My committed festivals (Going/Ticketed) — the primary ranking signal.
+        var myFestivalIds = await db.Attendances
             .AsNoTracking()
-            .Where(a => a.UserId == request.CurrentUserId
+            .Where(a => a.UserId == meId
                 && (a.Status == AttendanceStatus.Going || a.Status == AttendanceStatus.Ticketed))
             .Select(a => a.FestivalId)
             .ToListAsync(cancellationToken);
-        var myFestivalSet = myCommittedFestivalIds.ToHashSet();
+        var myFestivalSet = myFestivalIds.ToHashSet();
 
         var festivalNames = myFestivalSet.Count == 0
             ? new Dictionary<Guid, string>()
@@ -41,35 +36,32 @@ public class GetDiscoveryHandler(TechnoDatingDbContext db, IBlobStorage storage)
                 .Where(f => myFestivalSet.Contains(f.Id))
                 .ToDictionaryAsync(f => f.Id, f => f.Name, cancellationToken);
 
-        // Anyone I've already acted on (liked or passed) or already matched with drops out of discovery.
+        // My top artists — the secondary ranking signal (music-taste overlap).
+        var myArtistSet = (await db.UserTopArtists
+            .AsNoTracking()
+            .Where(x => x.UserId == meId)
+            .Select(x => x.ArtistId)
+            .ToListAsync(cancellationToken)).ToHashSet();
+
+        // Anyone I've already acted on (liked or passed) or already matched with drops out.
         var alreadyActedOn = await db.Likes
             .AsNoTracking()
-            .Where(l => l.LikerId == request.CurrentUserId)
+            .Where(l => l.LikerId == meId)
             .Select(l => l.LikedId)
             .ToListAsync(cancellationToken);
         var alreadyMatched = await db.Matches
             .AsNoTracking()
-            .Where(m => m.UserAId == request.CurrentUserId || m.UserBId == request.CurrentUserId)
-            .Select(m => m.UserAId == request.CurrentUserId ? m.UserBId : m.UserAId)
+            .Where(m => m.UserAId == meId || m.UserBId == meId)
+            .Select(m => m.UserAId == meId ? m.UserBId : m.UserAId)
             .ToListAsync(cancellationToken);
-        var excludedIds = alreadyActedOn.Concat(alreadyMatched).Append(request.CurrentUserId).ToHashSet().ToList();
+        var excluded = alreadyActedOn.Concat(alreadyMatched).Append(meId).ToHashSet();
 
         var users = await db.Users
             .AsNoTracking()
-            .Where(u => !excludedIds.Contains(u.Id)
-                && u.Location != null
-                && u.DisplayName != null
-                && u.DateOfBirth != null
-                && u.City != null)
-            .Select(u => new
-            {
-                u.Id,
-                u.DisplayName,
-                u.DateOfBirth,
-                u.City,
-                DistanceMeters = u.Location!.Distance(center),
-            })
+            .Where(u => u.DisplayName != null && u.DateOfBirth != null && u.City != null)
+            .Select(u => new { u.Id, u.DisplayName, u.DateOfBirth, u.City, u.LastActiveAt })
             .ToListAsync(cancellationToken);
+        users = users.Where(u => !excluded.Contains(u.Id)).ToList();
 
         if (users.Count == 0)
         {
@@ -115,6 +107,7 @@ public class GetDiscoveryHandler(TechnoDatingDbContext db, IBlobStorage storage)
                     .Cast<string>()
                     .ToList();
                 var artists = topArtistsByUser.TryGetValue(u.Id, out var a) ? a : empty;
+                var sharedArtistCount = artists.Count(ar => myArtistSet.Contains(ar.Id));
                 var photoUrl = primaryPhotoUrls.TryGetValue(u.Id, out var url) ? url : null;
 
                 return new
@@ -126,14 +119,16 @@ public class GetDiscoveryHandler(TechnoDatingDbContext db, IBlobStorage storage)
                         u.City!,
                         artists,
                         CommonFestivals: sharedNames,
-                        DistanceKm: Math.Round(u.DistanceMeters / 1000.0, 1),
                         PrimaryPhotoUrl: photoUrl),
-                    SharedCount = sharedNames.Count,
-                    Distance = u.DistanceMeters,
+                    SharedFestivalCount = sharedNames.Count,
+                    SharedArtistCount = sharedArtistCount,
+                    LastActive = u.LastActiveAt,
                 };
             })
-            .OrderByDescending(x => x.SharedCount)
-            .ThenBy(x => x.Distance)
+            // Festivals first, then taste, then most-recently-active so the feed is never empty.
+            .OrderByDescending(x => x.SharedFestivalCount)
+            .ThenByDescending(x => x.SharedArtistCount)
+            .ThenByDescending(x => x.LastActive)
             .Select(x => x.Profile)
             .ToList();
 

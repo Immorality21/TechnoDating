@@ -1,0 +1,128 @@
+@page "/discover"
+@attribute [Authorize]
+@inherits LocalizedComponentBase
+@inject IHttpClientFactory HttpClientFactory
+
+<h1>@L["Discover.Heading"]</h1>
+
+@if (matchedName is not null)
+{
+    <div class="alert alert-success d-flex justify-content-between align-items-center">
+        <div>
+            <strong>@L["Matches.Match.Title"]</strong>
+            <div>@string.Format(L["Matches.Match.Body"], matchedName)</div>
+        </div>
+        <button class="btn btn-sm btn-success" @onclick="() => matchedName = null">@L["Matches.Match.Dismiss"]</button>
+    </div>
+}
+
+@if (matches is null)
+{
+    <p><em>@L["Common.Loading"]</em></p>
+}
+else if (loadError is not null)
+{
+    <div class="alert alert-danger">
+        <strong>@L["Common.Error.ApiUnreachable"]</strong>
+        <div><code>@loadError</code></div>
+        <div class="mt-2">@L["Common.Error.ApiUnreachableHint"]</div>
+    </div>
+}
+else if (matches.Count == 0)
+{
+    <p class="text-muted">@L["Matches.Empty"]</p>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var m in matches)
+        {
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <Avatar DisplayName="@m.DisplayName" UserId="@m.Id" PhotoUrl="@m.PrimaryPhotoUrl" Size="52px" />
+                            <div>
+                                <h5 class="card-title mb-0">@m.DisplayName, @m.Age</h5>
+                                <h6 class="card-subtitle text-muted">@m.City</h6>
+                            </div>
+                        </div>
+                        <p class="mb-1"><strong>@L["Matches.Card.TopArtists"]</strong> @string.Join(" · ", m.TopArtists.Select(a => a.Name))</p>
+                        <p class="mb-0"><strong>@L["Matches.Card.SharedFestivals"]</strong> @string.Join(" · ", m.CommonFestivals)</p>
+                    </div>
+                    <div class="card-footer d-flex gap-2">
+                        <button class="btn btn-outline-secondary flex-fill" disabled="@acting.Contains(m.Id)"
+                                @onclick="() => Act(m, LikeKind.Pass)">
+                            @L["Matches.Card.Pass"]
+                        </button>
+                        <button class="btn btn-primary flex-fill" disabled="@acting.Contains(m.Id)"
+                                @onclick="() => Act(m, LikeKind.Like)">
+                            @L["Matches.Card.Like"]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    // The discovery feed (candidates), served from /api/discovery. Confirmed mutual matches
+    // live at /api/matches (MatchDto) — their own UI arrives with chat (Slice 3).
+    private List<MatchProfileDto>? matches;
+    private string? loadError;
+    private string? matchedName;
+    private readonly HashSet<Guid> acting = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var http = HttpClientFactory.CreateClient("api");
+            matches = await http.GetFromJsonAsync<List<MatchProfileDto>>("/api/discovery") ?? new();
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+    }
+
+    private async Task Act(MatchProfileDto m, LikeKind kind)
+    {
+        // Guard against double-clicks before the card is removed.
+        if (!acting.Add(m.Id))
+        {
+            return;
+        }
+        try
+        {
+            var http = HttpClientFactory.CreateClient("api");
+            var response = await http.PostAsJsonAsync("/api/likes", new SubmitLikeDto(m.Id, kind));
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<LikeResultDto>();
+
+            // The candidate drops out of the feed once acted on (server-side discovery
+            // already excludes liked/passed users, so it won't reappear on reload).
+            matches?.Remove(m);
+
+            if (kind == LikeKind.Like && result is { Matched: true })
+            {
+                matchedName = m.DisplayName;
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            acting.Remove(m.Id);
+        }
+    }
+}

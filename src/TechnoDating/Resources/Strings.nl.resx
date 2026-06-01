@@ -69,6 +69,7 @@
   <data name="Nav.Home" xml:space="preserve"><value>Home</value></data>
   <data name="Nav.Festivals" xml:space="preserve"><value>Festivals</value></data>
   <data name="Nav.Matches" xml:space="preserve"><value>Matches</value></data>
+  <data name="Nav.Discover" xml:space="preserve"><value>Ontdek</value></data>
   <data name="Nav.Profile" xml:space="preserve"><value>Profiel</value></data>
   <data name="Nav.SignIn" xml:space="preserve"><value>Inloggen</value></data>
 
@@ -140,9 +141,16 @@
   <data name="Attendance.Status.Going" xml:space="preserve"><value>Ga ernaartoe</value></data>
   <data name="Attendance.Status.Ticketed" xml:space="preserve"><value>Heb ticket</value></data>
 
+  <data name="Discover.Heading" xml:space="preserve"><value>Ontdek</value></data>
   <data name="Matches.Heading" xml:space="preserve"><value>Jouw matches</value></data>
-  <data name="Matches.Empty" xml:space="preserve"><value>Nog geen matches — geef aan naar welk festival je gaat om te zien wie er ook is.</value></data>
-  <data name="Matches.Card.KmAway" xml:space="preserve"><value>{0} km verderop</value></data>
+  <data name="Matches.List.Empty" xml:space="preserve"><value>Nog geen matches — zodra jij en iemand elkaar leuk vinden, verschijnen ze hier.</value></data>
+  <data name="Matches.Card.MatchedOn" xml:space="preserve"><value>Match op {0}</value></data>
+  <data name="Matches.Empty" xml:space="preserve"><value>Niemand nieuws om te tonen op dit moment — kom snel terug.</value></data>
   <data name="Matches.Card.TopArtists" xml:space="preserve"><value>Favoriete artiesten:</value></data>
   <data name="Matches.Card.SharedFestivals" xml:space="preserve"><value>Gedeelde festivals:</value></data>
+  <data name="Matches.Card.Like" xml:space="preserve"><value>Like</value></data>
+  <data name="Matches.Card.Pass" xml:space="preserve"><value>Overslaan</value></data>
+  <data name="Matches.Match.Title" xml:space="preserve"><value>Het is een match!</value></data>
+  <data name="Matches.Match.Body" xml:space="preserve"><value>Jij en {0} vinden elkaar leuk.</value></data>
+  <data name="Matches.Match.Dismiss" xml:space="preserve"><value>Doorgaan</value></data>
 </root>

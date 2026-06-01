@@ -8,19 +8,17 @@ using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Festivals.Handlers;
 
+/// <summary>
+/// The "who's going" list for a festival. Everyone here already shares this festival, so there
+/// is no distance/proximity ranking — ordered by display name. See docs/MATCHING.md.
+/// </summary>
 public class GetFestivalAttendeesHandler(TechnoDatingDbContext db, IBlobStorage storage) : IRequestHandler<GetFestivalAttendeesRequest, IReadOnlyList<MatchProfileDto>>
 {
     public async Task<IReadOnlyList<MatchProfileDto>> Handle(GetFestivalAttendeesRequest request, CancellationToken cancellationToken)
     {
-        var me = await db.Users
-            .AsNoTracking()
-            .Where(u => u.Id == request.CurrentUserId)
-            .Select(u => new { u.Location })
-            .FirstOrDefaultAsync(cancellationToken);
-
         var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
 
-        var query =
+        var rows = await (
             from a in db.Attendances.AsNoTracking()
             join u in db.Users.AsNoTracking() on a.UserId equals u.Id
             where a.FestivalId == request.FestivalId
@@ -28,20 +26,14 @@ public class GetFestivalAttendeesHandler(TechnoDatingDbContext db, IBlobStorage 
                 && u.DisplayName != null
                 && u.DateOfBirth != null
                 && u.City != null
+            orderby u.DisplayName
             select new
             {
                 u.Id,
                 u.DisplayName,
                 u.DateOfBirth,
                 u.City,
-                DistanceMeters = me!.Location != null && u.Location != null
-                    ? u.Location.Distance(me.Location)
-                    : (double?)null,
-            };
-
-        var rows = me?.Location is null
-            ? await query.ToListAsync(cancellationToken)
-            : await query.OrderBy(x => x.DistanceMeters ?? double.MaxValue).ToListAsync(cancellationToken);
+            }).ToListAsync(cancellationToken);
 
         if (rows.Count == 0)
         {
@@ -69,7 +61,6 @@ public class GetFestivalAttendeesHandler(TechnoDatingDbContext db, IBlobStorage 
             u.City!,
             topArtistsByUser.TryGetValue(u.Id, out var artists) ? artists : empty,
             CommonFestivals: [],
-            DistanceKm: u.DistanceMeters.HasValue ? Math.Round(u.DistanceMeters.Value / 1000.0, 1) : 0,
             PrimaryPhotoUrl: primaryPhotoUrls.TryGetValue(u.Id, out var url) ? url : null))
             .ToList();
     }

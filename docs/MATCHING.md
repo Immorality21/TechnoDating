@@ -23,6 +23,15 @@ We do **not** yet know how matching should fundamentally work. The current model
 
 Every path that creates a match calls **one method** — `IMatchmaker.TryCreateMatchAsync`. The "mutual like" rule is just the first *producer* feeding it. Swapping the matching model later = write a new producer + disable the like handler; nothing downstream changes.
 
+## Ranking: no physical distance
+
+The geography that matters is **which shows you both go to**, not where you each live. Two people both going to Awakenings should match whether they're in Groningen and Maastricht. Home-city proximity is the swipe-app paradigm (Tinder/Happn) we're differentiating away from, so it is **not** a signal.
+
+- `User` has **no geo `Location`** — only a free-text `City` for display.
+- **Discovery ranking** (`GetDiscoveryHandler`): `shared festivals → music-taste overlap (shared top artists) → most-recently-active`. The taste tier + recency fallback mean the feed is never empty during cold start (when few users share festivals yet).
+- **Festival "who's going"** (`GetFestivalAttendeesHandler`): everyone already shares the festival, so it's ordered by display name — no distance.
+- `Festival.Location` (geography) stays for festival info/maps; PostGIS remains enabled for it.
+
 ### Two rules that protect this flexibility
 
 1. **No match logic in the database.** No triggers, no auto-creating views. The policy lives in C# handlers — testable, observable, swappable.

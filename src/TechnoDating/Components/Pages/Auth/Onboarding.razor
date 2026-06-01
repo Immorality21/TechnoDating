@@ -84,9 +84,7 @@
                 gender,
                 Bio: null,
                 city.Trim(),
-                TopArtistIds: selectedArtistIds.ToList(),
-                Longitude: null,
-                Latitude: null);
+                TopArtistIds: selectedArtistIds.ToList());
 
             var http = HttpClientFactory.CreateClient("api");
             var response = await http.PutAsJsonAsync("/api/users/me", dto);

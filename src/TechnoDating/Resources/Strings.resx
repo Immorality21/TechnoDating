@@ -69,6 +69,7 @@
   <data name="Nav.Home" xml:space="preserve"><value>Home</value></data>
   <data name="Nav.Festivals" xml:space="preserve"><value>Festivals</value></data>
   <data name="Nav.Matches" xml:space="preserve"><value>Matches</value></data>
+  <data name="Nav.Discover" xml:space="preserve"><value>Discover</value></data>
   <data name="Nav.Profile" xml:space="preserve"><value>Profile</value></data>
   <data name="Nav.SignIn" xml:space="preserve"><value>Sign in</value></data>
 
@@ -140,9 +141,16 @@
   <data name="Attendance.Status.Going" xml:space="preserve"><value>Going</value></data>
   <data name="Attendance.Status.Ticketed" xml:space="preserve"><value>Ticketed</value></data>
 
+  <data name="Discover.Heading" xml:space="preserve"><value>Discover</value></data>
   <data name="Matches.Heading" xml:space="preserve"><value>Your matches</value></data>
-  <data name="Matches.Empty" xml:space="preserve"><value>No matches yet — try marking yourself as going to a festival to see who else will be there.</value></data>
-  <data name="Matches.Card.KmAway" xml:space="preserve"><value>{0} km away</value></data>
+  <data name="Matches.List.Empty" xml:space="preserve"><value>No matches yet — when you and someone like each other, they'll show up here.</value></data>
+  <data name="Matches.Card.MatchedOn" xml:space="preserve"><value>Matched {0}</value></data>
+  <data name="Matches.Empty" xml:space="preserve"><value>No one new to show right now — check back soon.</value></data>
   <data name="Matches.Card.TopArtists" xml:space="preserve"><value>Top artists:</value></data>
   <data name="Matches.Card.SharedFestivals" xml:space="preserve"><value>Shared festivals:</value></data>
+  <data name="Matches.Card.Like" xml:space="preserve"><value>Like</value></data>
+  <data name="Matches.Card.Pass" xml:space="preserve"><value>Pass</value></data>
+  <data name="Matches.Match.Title" xml:space="preserve"><value>It's a match!</value></data>
+  <data name="Matches.Match.Body" xml:space="preserve"><value>You and {0} liked each other.</value></data>
+  <data name="Matches.Match.Dismiss" xml:space="preserve"><value>Continue</value></data>
 </root>

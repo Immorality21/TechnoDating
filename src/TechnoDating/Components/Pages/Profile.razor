@@ -144,9 +144,7 @@ else
                 gender,
                 string.IsNullOrWhiteSpace(bio) ? null : bio.Trim(),
                 city.Trim(),
-                selectedArtistIds.ToList(),
-                Longitude: null,
-                Latitude: null);
+                selectedArtistIds.ToList());
 
             var http = HttpClientFactory.CreateClient("api");
             var response = await http.PutAsJsonAsync("/api/users/me", dto);

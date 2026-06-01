@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using NetTopologySuite.Geometries;
 using TechnoDating.Api.Application.Photos;
 using TechnoDating.Api.Application.Storage;
 using TechnoDating.Api.Application.Users.Requests;
@@ -26,10 +25,6 @@ public class UpdateMeHandler(TechnoDatingDbContext db, IBlobStorage storage) : I
         user.Gender = p.Gender;
         user.Bio = p.Bio;
         user.City = p.City;
-        if (p.Longitude.HasValue && p.Latitude.HasValue)
-        {
-            user.Location = new Point(p.Longitude.Value, p.Latitude.Value) { SRID = 4326 };
-        }
         user.LastActiveAt = DateTimeOffset.UtcNow;
 
         await db.UserTopArtists.Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);

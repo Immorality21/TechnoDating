@@ -6,6 +6,4 @@ public record UpdateProfileDto(
     string Gender,
     string? Bio,
     string City,
-    IReadOnlyList<Guid> TopArtistIds,
-    double? Longitude,
-    double? Latitude);
+    IReadOnlyList<Guid> TopArtistIds);
