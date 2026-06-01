@@ -1,0 +1,212 @@
+@page "/festivals"
+@rendermode InteractiveServer
+@inject AdminApiClient Api
+
+<h1>Festivals</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">@(editingId is null ? "New festival" : "Edit festival")</h5>
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label class="form-label">Name</label>
+                <input class="form-control" @bind="name" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-control" @bind="date" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">City</label>
+                <input class="form-control" @bind="city" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Venue</label>
+                <input class="form-control" @bind="venue" />
+            </div>
+        </div>
+        <div class="mt-3">
+            <label class="form-label">Headliners</label>
+            @if (artists is null)
+            {
+                <div><em>Loading artists…</em></div>
+            }
+            else
+            {
+                <div class="row">
+                    @foreach (var a in artists)
+                    {
+                        <div class="col-md-3 form-check">
+                            <input class="form-check-input" type="checkbox" id="@($"a-{a.Id}")"
+                                   checked="@selectedArtistIds.Contains(a.Id)"
+                                   @onchange="e => ToggleArtist(a.Id, Convert.ToBoolean(e.Value))" />
+                            <label class="form-check-label" for="@($"a-{a.Id}")">
+                                @a.Name <span class="text-muted small">@a.Genre</span>
+                            </label>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-primary" @onclick="Save" disabled="@(!CanSave)">@(editingId is null ? "Create" : "Save")</button>
+            @if (editingId is not null)
+            {
+                <button class="btn btn-secondary ms-2" @onclick="ResetForm">Cancel</button>
+            }
+            @if (formMessage is not null)
+            {
+                <span class="ms-3 text-danger">@formMessage</span>
+            }
+        </div>
+    </div>
+</div>
+
+@if (festivals is null)
+{
+    <p><em>Loading…</em></p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else
+{
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr><th>Date</th><th>Name</th><th>City</th><th>Venue</th><th>Headliners</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var f in festivals)
+            {
+                <tr>
+                    <td>@f.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td>
+                    <td>@f.Name</td>
+                    <td>@f.City</td>
+                    <td>@f.Venue</td>
+                    <td class="small">@string.Join(", ", f.Headliners.Select(h => h.Name))</td>
+                    <td style="white-space: nowrap;">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(f)">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => Delete(f.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<AdminFestivalDto>? festivals;
+    private IReadOnlyList<ArtistDto>? artists;
+    private string? error;
+
+    private Guid? editingId;
+    private string name = "";
+    private DateOnly date = DateOnly.FromDateTime(DateTime.Today);
+    private string city = "";
+    private string venue = "";
+    private readonly HashSet<Guid> selectedArtistIds = new();
+    private string? formMessage;
+
+    private bool CanSave
+    {
+        get
+        {
+            return !string.IsNullOrWhiteSpace(name)
+                && !string.IsNullOrWhiteSpace(city)
+                && !string.IsNullOrWhiteSpace(venue);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            artists = await Api.GetArtistsAsync();
+            await LoadFestivalsAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private async Task LoadFestivalsAsync()
+    {
+        festivals = await Api.GetFestivalsAsync();
+    }
+
+    private void ToggleArtist(Guid id, bool selected)
+    {
+        if (selected)
+        {
+            selectedArtistIds.Add(id);
+        }
+        else
+        {
+            selectedArtistIds.Remove(id);
+        }
+    }
+
+    private void Edit(AdminFestivalDto f)
+    {
+        editingId = f.Id;
+        name = f.Name;
+        date = f.Date;
+        city = f.City;
+        venue = f.Venue;
+        selectedArtistIds.Clear();
+        foreach (var h in f.Headliners)
+        {
+            selectedArtistIds.Add(h.Id);
+        }
+        formMessage = null;
+    }
+
+    private void ResetForm()
+    {
+        editingId = null;
+        name = "";
+        date = DateOnly.FromDateTime(DateTime.Today);
+        city = "";
+        venue = "";
+        selectedArtistIds.Clear();
+        formMessage = null;
+    }
+
+    private async Task Save()
+    {
+        if (!CanSave)
+        {
+            return;
+        }
+        var dto = new SaveFestivalDto(name.Trim(), date, city.Trim(), venue.Trim(), selectedArtistIds.ToList());
+        try
+        {
+            if (editingId is null)
+            {
+                await Api.CreateFestivalAsync(dto);
+            }
+            else
+            {
+                await Api.UpdateFestivalAsync(editingId.Value, dto);
+            }
+            ResetForm();
+            await LoadFestivalsAsync();
+        }
+        catch (Exception ex)
+        {
+            formMessage = ex.Message;
+        }
+    }
+
+    private async Task Delete(Guid id)
+    {
+        await Api.DeleteFestivalAsync(id);
+        if (editingId == id)
+        {
+            ResetForm();
+        }
+        await LoadFestivalsAsync();
+    }
+}

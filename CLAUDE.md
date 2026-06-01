@@ -51,7 +51,8 @@ dotnet-tools.json              ← local dotnet-ef tool pinned
     │       ├── TechnoDatingDbContext.cs   ← IdentityDbContext<User, IdentityRole<Guid>, Guid>
     │       ├── Migrations/           ← EF Core migrations
     │       └── Seeding/              ← DatabaseInitializer + BlobStorageInitializer (IHostedServices)
-    ├── TechnoDating.Contracts/       ← DTOs shared by Mobile + Api
+    ├── TechnoDating.Admin/           ← Blazor Server admin tool (calls /api/admin/* with X-Admin-Key; local-only, port 5100)
+    ├── TechnoDating.Contracts/       ← DTOs shared by Mobile + Api + Admin
     └── TechnoDating.Workers/         ← (later) background services
 ```
 
@@ -88,6 +89,13 @@ The core loop. **Match creation is a swappable policy**: every match is created 
 - `POST /api/likes` (`Application/Likes/`) → record a `Like`/`Pass` signal; returns `{ matched, matchId? }`.
 - `GET /api/matches` (`Application/Matches/`) → **confirmed** mutual matches (`MatchDto`).
 - `GET /api/discovery` (`Application/Discovery/`) → the **candidate feed** (`MatchProfileDto`), ranked **shared festivals → music-taste overlap (shared artists) → most-recently-active** — no physical distance — excluding anyone already liked/passed/matched. (This is the feed formerly served by `/api/matches`.)
+
+### Admin API (internal tooling) — `Application/Admin/`
+
+Internal endpoints gated by an **`X-Admin-Key` header** (`AdminApiKeyFilter`, config `Admin:ApiKey`) — local-only stopgap, **not** `[Authorize]`/JWT-based; upgrade to an Identity `Admin` role (already wired) when deployed for a team. Consumed by the separate **`TechnoDating.Admin` Blazor Server app** — never put admin code in the mobile app.
+- `GET /api/admin/users` — user list (+ computed `IsProfileComplete`) for troubleshooting.
+- `GET /api/admin/matches` — all matches with both display names + origin/status. `POST /api/admin/matches/force` (`{userAId,userBId}`) force-creates a match **through `IMatchmaker` (`MatchOrigin.Admin`)** — never raw SQL. `DELETE /api/admin/matches/{id}` closes (soft) a match.
+- `GET/POST/PUT/DELETE /api/admin/festivals` — festival CRUD incl. ordered headliner lineup (`SaveFestivalDto.HeadlinerArtistIds`; replace via tracked `RemoveRange`/`Add`).
 
 ### API architecture (vertical slice + MediatR)
 
@@ -194,3 +202,4 @@ Static field initializers don't re-run on Hot Reload — they're a silent trap. 
 - **Login in dev**: seeded users have phones `+31600000001`–`+31600000004` (Sofie / Daan / Lieke / Maud). Hit `request-otp` with any of them, watch the API console for `[OTP] +31600000001: 123456`, paste into the verify screen. For new-user signup flow, use any unseeded `+31...` number — the user is auto-created and routed to `/onboarding`.
 - **Inspect DB**: DBeaver Community installed via winget. Connection: `localhost:5432` / db=`technodating` / user=`technodating` / pw=`dev`. PostGIS `Location` columns show as binary by default — query with `ST_AsText(location)` for readable coordinates.
 - **Inspect blobs (MinIO)**: open `http://localhost:9001` for the MinIO console. Login `technodating` / `dev-only-secret`. Bucket `technodating-photos` auto-created on first API run.
+- **Admin tool**: `dotnet run --project src/TechnoDating.Admin` → `http://localhost:5100` (Users / Matches / Festivals). Needs the API running on `:5000`; auth is the `X-Admin-Key` header (`dev-admin-key`) sent server-side. Config in `src/TechnoDating.Admin/appsettings.json` (`Api:BaseUrl`, `Api:AdminKey`).

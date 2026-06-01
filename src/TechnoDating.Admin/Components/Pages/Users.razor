@@ -1,0 +1,53 @@
+@page "/"
+@inject AdminApiClient Api
+
+<h1>Users</h1>
+
+@if (users is null)
+{
+    <p><em>Loading…</em></p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else
+{
+    <p class="text-muted">@users.Count users</p>
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr><th>Name</th><th>Phone</th><th>City</th><th>Verified</th><th>Complete</th><th>Created</th><th>Id</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var u in users)
+            {
+                <tr>
+                    <td>@(u.DisplayName ?? "—")</td>
+                    <td>@u.PhoneNumber</td>
+                    <td>@(u.City ?? "—")</td>
+                    <td>@(u.IsVerified ? "✓" : "")</td>
+                    <td>@(u.IsProfileComplete ? "✓" : "")</td>
+                    <td>@u.CreatedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td>
+                    <td><code class="small">@u.Id</code></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<AdminUserDto>? users;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            users = await Api.GetUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

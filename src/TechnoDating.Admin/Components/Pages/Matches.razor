@@ -1,0 +1,148 @@
+@page "/matches"
+@rendermode InteractiveServer
+@inject AdminApiClient Api
+
+<h1>Matches</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Force a match</h5>
+        <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label">User A</label>
+                <select class="form-select" @bind="userAId">
+                    <option value="">— select —</option>
+                    @if (users is not null)
+                    {
+                        @foreach (var u in users)
+                        {
+                            <option value="@u.Id">@Label(u)</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">User B</label>
+                <select class="form-select" @bind="userBId">
+                    <option value="">— select —</option>
+                    @if (users is not null)
+                    {
+                        @foreach (var u in users)
+                        {
+                            <option value="@u.Id">@Label(u)</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" @onclick="ForceMatch" disabled="@(!CanForce)">Match</button>
+            </div>
+        </div>
+        @if (forceMessage is not null)
+        {
+            <div class="mt-2 @forceClass">@forceMessage</div>
+        }
+    </div>
+</div>
+
+@if (matches is null)
+{
+    <p><em>Loading…</em></p>
+}
+else if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else
+{
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr><th>User A</th><th>User B</th><th>Origin</th><th>Status</th><th>Created</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var m in matches)
+            {
+                <tr>
+                    <td>@(m.UserAName ?? "—")</td>
+                    <td>@(m.UserBName ?? "—")</td>
+                    <td>@m.Origin</td>
+                    <td>@m.Status</td>
+                    <td>@m.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</td>
+                    <td>
+                        @if (m.Status == MatchStatus.Active)
+                        {
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Close(m.MatchId)">Close</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<AdminUserDto>? users;
+    private IReadOnlyList<AdminMatchDto>? matches;
+    private string? error;
+    private string userAId = "";
+    private string userBId = "";
+    private string? forceMessage;
+    private string forceClass = "";
+
+    private bool CanForce
+    {
+        get
+        {
+            return Guid.TryParse(userAId, out _) && Guid.TryParse(userBId, out _) && userAId != userBId;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            users = await Api.GetUsersAsync();
+            matches = await Api.GetMatchesAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private async Task ForceMatch()
+    {
+        if (!CanForce)
+        {
+            return;
+        }
+        var err = await Api.ForceMatchAsync(Guid.Parse(userAId), Guid.Parse(userBId));
+        if (err is null)
+        {
+            forceMessage = "Match created.";
+            forceClass = "text-success";
+        }
+        else
+        {
+            forceMessage = err;
+            forceClass = "text-danger";
+        }
+        await LoadAsync();
+    }
+
+    private async Task Close(Guid id)
+    {
+        await Api.CloseMatchAsync(id);
+        await LoadAsync();
+    }
+
+    private static string Label(AdminUserDto u)
+    {
+        return $"{u.DisplayName ?? "(no name)"} · {u.PhoneNumber}";
+    }
+}
