@@ -7,13 +7,14 @@ using TechnoDating.Contracts;
 
 namespace TechnoDating.Api.Application.Matches;
 
+/// <summary>Confirmed mutual matches. The candidate feed lives on <c>/api/discovery</c>.</summary>
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
 public class MatchesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<MatchProfileDto>>> Get(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<MatchDto>>> Get(CancellationToken cancellationToken)
     {
         var raw = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(raw, out var userId))

@@ -10,6 +10,7 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
 {
     public DbSet<Festival> Festivals => Set<Festival>();
     public DbSet<Match> Matches => Set<Match>();
+    public DbSet<Like> Likes => Set<Like>();
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<UserFestivalAttendance> Attendances => Set<UserFestivalAttendance>();
@@ -46,9 +47,21 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
         modelBuilder.Entity<Match>(b =>
         {
             b.HasKey(m => m.Id);
+            b.Property(m => m.Origin).HasConversion<string>().HasMaxLength(32).IsRequired();
+            b.Property(m => m.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
             b.HasIndex(m => new { m.UserAId, m.UserBId }).IsUnique();
             b.HasOne(m => m.UserA).WithMany().HasForeignKey(m => m.UserAId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(m => m.UserB).WithMany().HasForeignKey(m => m.UserBId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Like>(b =>
+        {
+            b.HasKey(l => l.Id);
+            b.Property(l => l.Kind).HasConversion<string>().HasMaxLength(16).IsRequired();
+            b.HasIndex(l => new { l.LikerId, l.LikedId }).IsUnique();
+            b.HasIndex(l => l.LikedId);
+            b.HasOne(l => l.Liker).WithMany().HasForeignKey(l => l.LikerId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(l => l.Liked).WithMany().HasForeignKey(l => l.LikedId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<OtpChallenge>(b =>

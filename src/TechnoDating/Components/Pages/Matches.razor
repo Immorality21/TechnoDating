@@ -57,7 +57,9 @@ else
         try
         {
             var http = HttpClientFactory.CreateClient("api");
-            matches = await http.GetFromJsonAsync<MatchProfileDto[]>("/api/matches");
+            // This page shows the discovery feed (candidates), now served from /api/discovery.
+            // Confirmed mutual matches live at /api/matches (MatchDto) — UI for those arrives with chat (Slice 3).
+            matches = await http.GetFromJsonAsync<MatchProfileDto[]>("/api/discovery");
         }
         catch (Exception ex)
         {

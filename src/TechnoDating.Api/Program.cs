@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using TechnoDating.Api.Application.Auth;
+using TechnoDating.Api.Application.Matches;
 using TechnoDating.Api.Application.Storage;
 using TechnoDating.Api.Infrastructure;
 using TechnoDating.Api.Infrastructure.Entities;
@@ -52,6 +53,7 @@ builder.Services.AddSingleton<IPasswordHasher<OtpChallenge>, PasswordHasher<OtpC
 builder.Services.AddScoped<IOtpSender, ConsoleOtpSender>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IMatchmaker, Matchmaker>();
 
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
     ?? throw new InvalidOperationException("Missing 'Jwt' configuration section.");

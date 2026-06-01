@@ -72,14 +72,22 @@ Application + Infrastructure both live **inside the Api project** as folders. Do
 - `Artist` — Id, Name, Slug (unique, canonical lookup key), Genre? ("hard techno" / "melodic techno" / "industrial techno" / "house"), CreatedAt. **Seeded catalog, no user-creation**.
 - `UserTopArtist` — link table: Id, UserId (FK→User, cascade), ArtistId (FK→Artist, cascade), Rank (1-based for display order). Unique on `(UserId, ArtistId)`.
 - `FestivalHeadlineArtist` — link table: Id, FestivalId (FK→Festival, cascade), ArtistId (FK→Artist, cascade), BillingOrder. Unique on `(FestivalId, ArtistId)`.
-- `Match` — Id, UserAId, UserBId, MatchedAt (unique (UserAId, UserBId)) — confirmed mutual matches; not yet wired in (empty).
+- `Match` — Id, UserAId, UserBId, `Origin` (`MatchOrigin` enum, varchar), `Status` (`MatchStatus` enum, varchar), CreatedAt, `ExpiresAt?` (nullable, unused for now). Pair stored **canonically** (`UserAId < UserBId`), unique on `(UserAId, UserBId)`. Confirmed connections; created **only** via `IMatchmaker.TryCreateMatchAsync` (the single chokepoint — see `docs/MATCHING.md`).
+- `Like` — Id, LikerId, LikedId, `Kind` (`LikeKind` enum: `Like | Pass`, varchar), CreatedAt. Unique on `(LikerId, LikedId)`; index on `LikedId`. Append-only **directional signal**, deliberately decoupled from `Match` so the matching policy can change without a migration.
 - `OtpChallenge` — Id, PhoneNumber, CodeHash (PBKDF2 via `IPasswordHasher<OtpChallenge>`), ExpiresAt, AttemptCount, ConsumedAt?, CreatedAt. Indexed on `(PhoneNumber, ExpiresAt)`.
 - `RefreshToken` — Id, UserId (FK→User), TokenHash (SHA-256 hex of plaintext), IssuedAt, ExpiresAt, RevokedAt?, ReplacedByTokenId? (rotation chain). Unique index on TokenHash.
 - `UserFestivalAttendance` — Id, UserId (FK→User, cascade), FestivalId (FK→Festival, cascade), Status (`AttendanceStatus` enum stored as varchar via `.HasConversion<string>()`), CreatedAt, UpdatedAt. Unique on `(UserId, FestivalId)`; index on `FestivalId`. `AttendanceStatus` lives in `Contracts` and is `Interested | Going | Ticketed` — JSON-serialised as string via `[JsonConverter(typeof(JsonStringEnumConverter<AttendanceStatus>))]`. **"No row" = no status** (no fourth enum value); DELETE the row to revert to that state.
 - `Photo` — Id, UserId (FK→User, cascade), Ordinal, Width, Height, StorageKey (e.g. `users/{userId}/photos/{photoId}` — variants live at `{key}/thumb.webp|card.webp|full.webp`), ContentType, ModerationStatus (`approved` by default; full mod queue is Tier-6 BACKLOG), UploadedAt. Unique on `(UserId, Ordinal)`. **No `IsPrimary` column** — the primary photo is referenced from `User.PrimaryPhotoId` (Option C: single source of truth, atomic UPDATE on switch, no partial-unique-index hack). Up to 6 photos per user (enforced in `UploadPhotoHandler`).
 - Plus the six Identity tables: `AspNetUsers`, `AspNetUserClaims`, `AspNetUserLogins`, `AspNetUserTokens`, `AspNetUserRoles`, `AspNetRoles`, `AspNetRoleClaims`.
 
-**Not yet modelled** (TODOs as they become relevant): swipe/like events, messages, iDIN verification result store, ticket-verification audit log, artist subgenre hierarchy (currently a single `Genre` string).
+**Not yet modelled** (TODOs as they become relevant): messages (Slice 3 — chat), iDIN verification result store, ticket-verification audit log, artist subgenre hierarchy (currently a single `Genre` string).
+
+### Matching & messaging — see [`docs/MATCHING.md`](docs/MATCHING.md)
+
+The core loop. **Match creation is a swappable policy**: every match is created through the single `IMatchmaker.TryCreateMatchAsync(a, b, origin)` chokepoint (idempotent, canonical pair). The "mutual like ⇒ match" rule lives entirely in `SubmitLikeHandler` and is the only swappable piece — `Match`, the matches list, and (later) chat never depend on it. Endpoints:
+- `POST /api/likes` (`Application/Likes/`) → record a `Like`/`Pass` signal; returns `{ matched, matchId? }`.
+- `GET /api/matches` (`Application/Matches/`) → **confirmed** mutual matches (`MatchDto`).
+- `GET /api/discovery` (`Application/Discovery/`) → the **candidate feed** (`MatchProfileDto`), ranked by shared festivals + distance, excluding anyone already liked/passed/matched. (This is the feed formerly served by `/api/matches`.)
 
 ### API architecture (vertical slice + MediatR)
 
@@ -168,6 +176,12 @@ Application + Infrastructure both live **inside the Api project** as folders. Do
 ### Hot-reload-friendly patterns
 
 Static field initializers don't re-run on Hot Reload — they're a silent trap. Method bodies do re-run. Keep mutable-feeling test data and seed lists **inside handler `Handle` methods**, not as `static readonly` fields. When real data lands, the same handlers move from inline lists to repository/EF Core calls.
+
+## Testing
+
+- **`tests/TechnoDating.Api.Tests`** — xUnit, in the solution. Run with `dotnet test tests/TechnoDating.Api.Tests` (avoid `dotnet test` on the whole `.slnx` — it pulls in the MAUI project, which needs the workload).
+- Uses the **EF Core InMemory** provider (`TestDb.NewContext()`) for fast, isolated logic tests — no Postgres needed. Caveat: InMemory does **not** enforce unique indexes and does not run PostGIS, so don't rely on DB constraints or spatial queries in unit tests; assert on handler/service logic instead.
+- Write tests alongside new application logic going forward (handlers, services). Current coverage: `Matchmaker` (canonical pair, idempotency, self-match guard) and `SubmitLikeHandler` (one-way vs reciprocal like, pass, unknown target, re-like).
 
 ## Local development notes
 
