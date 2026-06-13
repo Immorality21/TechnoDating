@@ -5,6 +5,7 @@
 @inject IAuthStateService Auth
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Nav
+@using TechnoDating.Contracts
 
 <h1>@L["Onboarding.Heading"]</h1>
 
@@ -38,6 +39,15 @@
     </div>
 
     <div class="mb-3">
+        <label for="goal" class="form-label">@L["Profile.Goal"]</label>
+        <select id="goal" class="form-select" @bind="goal" disabled="@busy">
+            <option value="@UserGoal.Both">@L["Profile.Goal.Both"]</option>
+            <option value="@UserGoal.Romance">@L["Profile.Goal.Romance"]</option>
+            <option value="@UserGoal.Friends">@L["Profile.Goal.Friends"]</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
         <label class="form-label">@L["Onboarding.Artists.Heading"]</label>
         <div class="text-muted small mb-2">@L["Onboarding.Artists.Hint"]</div>
         <ArtistPicker SelectedIds="selectedArtistIds" OnChanged="StateHasChanged" Disabled="busy" />
@@ -58,6 +68,7 @@
     private DateTime? dateOfBirth;
     private string gender = string.Empty;
     private string city = string.Empty;
+    private UserGoal goal = UserGoal.Both;
     private HashSet<Guid> selectedArtistIds = [];
     private bool busy;
     private string? errorMessage;
@@ -84,7 +95,8 @@
                 gender,
                 Bio: null,
                 city.Trim(),
-                TopArtistIds: selectedArtistIds.ToList());
+                TopArtistIds: selectedArtistIds.ToList(),
+                Goal: goal);
 
             var http = HttpClientFactory.CreateClient("api");
             var response = await http.PutAsJsonAsync("/api/users/me", dto);

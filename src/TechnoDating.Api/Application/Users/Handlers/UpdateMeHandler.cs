@@ -25,6 +25,7 @@ public class UpdateMeHandler(TechnoDatingDbContext db, IBlobStorage storage) : I
         user.Gender = p.Gender;
         user.Bio = p.Bio;
         user.City = p.City;
+        user.Goal = p.Goal;
         user.LastActiveAt = DateTimeOffset.UtcNow;
 
         await db.UserTopArtists.Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);

@@ -105,6 +105,10 @@
   <data name="Profile.Phone" xml:space="preserve"><value>Phone</value></data>
   <data name="Profile.Bio" xml:space="preserve"><value>Bio</value></data>
   <data name="Profile.TopArtists" xml:space="preserve"><value>Top artists</value></data>
+  <data name="Profile.Goal" xml:space="preserve"><value>What are you looking for?</value></data>
+  <data name="Profile.Goal.Both" xml:space="preserve"><value>Both — friends and romance</value></data>
+  <data name="Profile.Goal.Romance" xml:space="preserve"><value>Love at a festival</value></data>
+  <data name="Profile.Goal.Friends" xml:space="preserve"><value>A friend to go to parties with</value></data>
   <data name="Profile.Language" xml:space="preserve"><value>Language</value></data>
   <data name="Profile.Photos.Heading" xml:space="preserve"><value>Photos</value></data>
   <data name="Profile.Photos.UploadButton" xml:space="preserve"><value>Upload photo</value></data>

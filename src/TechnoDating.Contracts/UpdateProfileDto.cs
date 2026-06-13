@@ -6,4 +6,5 @@ public record UpdateProfileDto(
     string Gender,
     string? Bio,
     string City,
-    IReadOnlyList<Guid> TopArtistIds);
+    IReadOnlyList<Guid> TopArtistIds,
+    UserGoal Goal = UserGoal.Both);

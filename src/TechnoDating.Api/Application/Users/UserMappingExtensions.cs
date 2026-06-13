@@ -25,7 +25,8 @@ public static class UserMappingExtensions
             photos,
             primary?.CardUrl,
             user.IsVerified,
-            user.IsProfileComplete);
+            user.IsProfileComplete,
+            user.Goal);
     }
 
     public static async Task<IReadOnlyList<ArtistRefDto>> LoadTopArtistsAsync(

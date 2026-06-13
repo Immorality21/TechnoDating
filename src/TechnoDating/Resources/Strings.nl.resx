@@ -105,6 +105,10 @@
   <data name="Profile.Phone" xml:space="preserve"><value>Telefoon</value></data>
   <data name="Profile.Bio" xml:space="preserve"><value>Bio</value></data>
   <data name="Profile.TopArtists" xml:space="preserve"><value>Favoriete artiesten</value></data>
+  <data name="Profile.Goal" xml:space="preserve"><value>Wat zoek je?</value></data>
+  <data name="Profile.Goal.Both" xml:space="preserve"><value>Allebei — vriendschap en liefde</value></data>
+  <data name="Profile.Goal.Romance" xml:space="preserve"><value>Liefde op een festival</value></data>
+  <data name="Profile.Goal.Friends" xml:space="preserve"><value>Een feestmaatje</value></data>
   <data name="Profile.Language" xml:space="preserve"><value>Taal</value></data>
   <data name="Profile.Photos.Heading" xml:space="preserve"><value>Foto's</value></data>
   <data name="Profile.Photos.UploadButton" xml:space="preserve"><value>Foto uploaden</value></data>

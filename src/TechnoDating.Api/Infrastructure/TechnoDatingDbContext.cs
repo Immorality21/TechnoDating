@@ -31,6 +31,7 @@ public class TechnoDatingDbContext(DbContextOptions<TechnoDatingDbContext> optio
             b.Property(u => u.Gender).HasMaxLength(32);
             b.Property(u => u.Bio).HasMaxLength(2000);
             b.Property(u => u.City).HasMaxLength(100);
+            b.Property(u => u.Goal).HasConversion<string>().HasMaxLength(16).HasDefaultValueSql("'Both'");
             b.Ignore(u => u.IsProfileComplete);
         });
 

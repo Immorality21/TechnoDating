@@ -12,4 +12,5 @@ public record UserProfileDto(
     IReadOnlyList<PhotoDto> Photos,
     string? PrimaryPhotoUrl,
     bool IsVerified,
-    bool IsProfileComplete);
+    bool IsProfileComplete,
+    UserGoal Goal = UserGoal.Both);

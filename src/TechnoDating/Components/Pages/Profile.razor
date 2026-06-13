@@ -5,6 +5,7 @@
 @inject IAuthStateService Auth
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Nav
+@using TechnoDating.Contracts
 
 <h1>@L["Profile.Heading"]</h1>
 
@@ -44,6 +45,15 @@ else
         <div class="mb-3">
             <label for="city" class="form-label">@L["Onboarding.City"]</label>
             <input id="city" class="form-control" @bind="city" maxlength="100" disabled="@busy" />
+        </div>
+
+        <div class="mb-3">
+            <label for="goal" class="form-label">@L["Profile.Goal"]</label>
+            <select id="goal" class="form-select" @bind="goal" disabled="@busy">
+                <option value="@UserGoal.Both">@L["Profile.Goal.Both"]</option>
+                <option value="@UserGoal.Romance">@L["Profile.Goal.Romance"]</option>
+                <option value="@UserGoal.Friends">@L["Profile.Goal.Friends"]</option>
+            </select>
         </div>
 
         <div class="mb-3">
@@ -95,6 +105,7 @@ else
     private string gender = string.Empty;
     private string city = string.Empty;
     private string bio = string.Empty;
+    private UserGoal goal = UserGoal.Both;
     private HashSet<Guid> selectedArtistIds = [];
     private bool busy;
     private string? message;
@@ -118,6 +129,7 @@ else
                 dateOfBirth = profile.DateOfBirth?.ToDateTime(TimeOnly.MinValue);
                 gender = profile.Gender ?? string.Empty;
                 city = profile.City ?? string.Empty;
+                goal = profile.Goal;
                 bio = profile.Bio ?? string.Empty;
                 selectedArtistIds = profile.TopArtists.Select(a => a.Id).ToHashSet();
             }
@@ -144,7 +156,8 @@ else
                 gender,
                 string.IsNullOrWhiteSpace(bio) ? null : bio.Trim(),
                 city.Trim(),
-                selectedArtistIds.ToList());
+                selectedArtistIds.ToList(),
+                goal);
 
             var http = HttpClientFactory.CreateClient("api");
             var response = await http.PutAsJsonAsync("/api/users/me", dto);
